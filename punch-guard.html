@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Punch Guard</title>
+<style>
+:root{
+  --bg:#12141a; --panel:#1c1f28; --panel2:#242835; --line:#333846;
+  --red:#e6483f; --blue:#3f7fe6;
+  --green:#3fe67f; --text:#e8e9ee; --muted:#8a8f9e;
+}
+*{box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;margin:0;
+  display:flex;justify-content:center;align-items:center;min-height:100vh;overflow-x:hidden;}
+#app{width:100%;max-width:480px;padding:16px;}
+h1{text-align:center;letter-spacing:2px;font-size:2.2em;margin:.3em 0;}
+h1 span{color:var(--red);}
+.screen{display:none;}
+.screen.active{display:block;}
+.btn{display:block;width:100%;padding:14px;margin:8px 0;background:var(--panel2);
+  border:2px solid var(--line);border-radius:10px;color:var(--text);font-size:1em;
+  cursor:pointer;text-align:center;}
+.btn:active{transform:scale(.98);}
+.btn.primary{background:var(--red);border-color:var(--red);font-weight:bold;}
+.btn.selected{border-color:var(--green);background:#1c3a2a;}
+.btn.small{padding:8px;font-size:.82em;}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted);font-size:.8em;padding:8px;}
+.movegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.row{display:flex;gap:8px;}
+.row .btn{flex:1;}
+.center{text-align:center;}
+.muted{color:var(--muted);font-size:.9em;}
+.hpbar-wrap{background:#000;border-radius:6px;overflow:hidden;height:14px;border:1px solid var(--line);}
+.hpbar{height:100%;transition:width .3s;}
+.hpbar.slow{transition:width 1.3s ease-out;}
+.statrow{display:flex;justify-content:space-between;align-items:center;margin:6px 0 2px;font-size:.85em;}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0;}
+.slots{display:flex;gap:8px;justify-content:center;margin:10px 0;}
+.slot{width:70px;height:44px;background:var(--panel2);border:2px dashed var(--line);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.75em;text-align:center;padding:2px;}
+.slot.filled{border-style:solid;}
+.fig-wrap{width:70px;height:100px;flex:none;}
+.arena{display:flex;justify-content:space-around;align-items:flex-end;margin:14px 0;}
+.beatlog{background:var(--panel2);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:.88em;}
+.flash-win{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #fff);}
+.flash-lose{opacity:.5;}
+.scroll{max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--panel);}
+.conflictBlock{border-bottom:1px solid var(--line);padding:8px 0;}
+.conflictBlock:last-child{border-bottom:none;}
+table.sumtable{width:100%;border-collapse:collapse;font-size:.82em;margin:6px 0;}
+table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:1px solid var(--line);}
+.hpmini{display:flex;gap:8px;margin:8px 0;}
+.hpmini > div{flex:1;}
+.small-label{font-size:.75em;color:var(--muted);}
+.sel-title{text-align:center;letter-spacing:0;font-size:1.05em;margin:.4em 0;font-weight:bold;}
+.rules-body{font-size:.88em;line-height:1.45;}
+.rules-body h3{margin:.8em 0 .3em;color:var(--red);}
+.rules-body ul{margin:.3em 0;padding-left:1.2em;}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:50;}
+.modal-backdrop.show{display:flex;}
+.modal-box{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:18px;width:88%;max-width:360px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="screen active" id="scr-menu">
+  <h1>PUNCH<br><span>GUARD</span></h1>
+  <div class="panel center muted">A simple 2-player boxing mind game.<br>Pick 3 moves, outguess your opponent.</div>
+  <button class="btn primary" onclick="goSetup()">START</button>
+  <button class="btn" onclick="show('scr-rules')">Rules & How to Play</button>
+</div>
+
+<div class="screen" id="scr-rules">
+  <h1 style="font-size:1.6em">Rules</h1>
+  <div class="scroll rules-body">
+    <h3>Structure</h3>
+    A match has 3 rounds. Each round has 3 conflicts. Each conflict, both players
+    secretly pick 3 moves in order. The moves clash beat-by-beat: your move 1 vs
+    their move 1, move 2 vs move 2, move 3 vs move 3.
+    <h3>Speed</h3>
+    When both players attack in the same beat, the faster move lands and the
+    slower one is interrupted (misses). Equal speed = both land (a trade).
+    Jab is fastest, then straights/crosses/body shots, then hooks, then
+    uppercuts, then the overhand cross (slowest but hardest-hitting).
+    <h3>Guard</h3>
+    Guard fully blocks light shots (jab, straight, cross, hooks, body shots).
+    Heavy shots (uppercuts, overhand) still chip 1-3 damage through.
+    <h3>Sway</h3>
+    Swaying (either direction) cleanly dodges jab, straight, cross. Hooks,
+    uppercuts, body shots and the overhand cross all catch a sway and land —
+    hooks/uppercuts hit <b>extra hard</b> when they catch you leaning.
+    A successful sway also gives you <b>timing priority</b> on your very next
+    move, letting it land first regardless of speed — great for setting up an
+    overhand.
+    <h3>Combos</h3>
+    Landing clean hits builds a damage streak (up to +3) that carries across
+    the whole match. Getting hit by anything other than a jab resets your
+    streak. Jab itself never builds or breaks a streak — it can't carry a
+    fight on its own.
+    <h3>Special: Jab vs Hooks/Body Shots</h3>
+    A jab can't stop a hook or body shot's momentum — if a jab meets one of
+    these, both punches land.
+    <h3>Haymaker</h3>
+    A clean, unguarded overhand cross stuns the opponent's next beat — if
+    they'd picked Guard they still cover up fine, otherwise their move fails.
+    <h3>Health & Rounds</h3>
+    Each fighter has 30 HP. Between rounds, they recover 20% of the HP they
+    lost that round (rounded down), plus 1 HP for every strike they fully
+    swayed or guarded that round (0 damage taken). A KO (0 HP) ends the
+    match instantly. Otherwise, each round is scored on damage dealt,
+    accuracy, and shots landed — whoever wins more rounds wins the match,
+    even if they lost a round badly.
+  </div>
+  <button class="btn primary" onclick="show('scr-menu')">Back to Menu</button>
+</div>
+
+<div class="screen" id="scr-setup">
+  <h1>Setup</h1>
+  <div class="panel">
+    <div class="center"><b style="color:var(--red)">PLAYER 1</b> stance</div>
+    <div class="row">
+      <button class="btn selected" id="p1-normal" onclick="setStance(1,'normal')">Normal</button>
+      <button class="btn" id="p1-south" onclick="setStance(1,'southpaw')">Southpaw</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="center"><b style="color:var(--blue)">PLAYER 2</b></div>
+    <div class="small-label center" style="margin:8px 0 4px">Opponent</div>
+    <div class="row">
+      <button class="btn selected" id="p2-human" onclick="setP2Type('human')">Human</button>
+      <button class="btn" id="p2-ai" onclick="setP2Type('ai')">AI</button>
+    </div>
+    <div id="p2-human-panel">
+      <div class="small-label center" style="margin:10px 0 4px">Stance</div>
+      <div class="row">
+        <button class="btn selected" id="p2-normal" onclick="setStance(2,'normal')">Normal</button>
+        <button class="btn" id="p2-south" onclick="setStance(2,'southpaw')">Southpaw</button>
+      </div>
+    </div>
+    <div id="p2-ai-panel" style="display:none">
+      <div class="small-label center" style="margin:10px 0 4px">Difficulty</div>
+      <div class="row">
+        <button class="btn selected" id="diff-standard" onclick="setDifficulty('standard')">Standard</button>
+        <button class="btn" id="diff-hard" onclick="setDifficulty('hard')">Hard</button>
+      </div>
+      <div class="center muted" id="ai-stance-label" style="margin-top:8px"></div>
+    </div>
+  </div>
+  <button class="btn primary" onclick="startMatch()">Begin Match</button>
+</div>
+
+<div class="screen" id="scr-pass">
+  <h1 id="pass-title">Pass to Player</h1>
+  <div class="panel center">
+    <p id="pass-text" class="muted"></p>
+    <button class="btn primary" id="pass-btn" onclick="revealSelect()">I'm ready</button>
+  </div>
+  <button class="btn ghost" onclick="askSurrender()">Surrender match</button>
+</div>
+
+<div class="screen" id="scr-select">
+  <h1 id="sel-title" class="sel-title">Player 1: Pick 3 moves</h1>
+  <div class="panel">
+    <div class="slots" id="sel-slots">
+      <div class="slot">1</div><div class="slot">2</div><div class="slot">3</div>
+    </div>
+    <button class="btn small" onclick="undoMove()">Undo last</button>
+  </div>
+  <div class="movegrid" id="movegrid"></div>
+  <button class="btn primary" id="confirm-btn" onclick="confirmMoves()" disabled>Confirm</button>
+  <button class="btn ghost" onclick="askSurrender()">Surrender match</button>
+</div>
+
+<div class="screen" id="scr-fight">
+  <div class="statrow"><span style="color:var(--red)">P1 <b id="p1hp-txt">30</b> HP</span>
+    <span id="rc-label" class="muted"></span>
+    <span style="color:var(--blue)">P2 <b id="p2hp-txt">30</b> HP</span></div>
+  <div class="row">
+    <div class="hpbar-wrap" style="flex:1"><div class="hpbar" id="p1hp" style="width:100%;background:var(--red)"></div></div>
+    <div class="hpbar-wrap" style="flex:1"><div class="hpbar" id="p2hp" style="width:100%;background:var(--blue)"></div></div>
+  </div>
+  <div class="arena">
+    <div class="fig-wrap" id="fig1"></div>
+    <div class="fig-wrap" id="fig2"></div>
+  </div>
+  <div id="beatlogs"></div>
+  <button class="btn primary" id="next-btn" onclick="nextStep()" style="display:none">Next</button>
+  <button class="btn ghost" onclick="askSurrender()">Surrender match</button>
+</div>
+
+<div class="screen" id="scr-roundsum">
+  <h1 id="rs-title">Round Summary</h1>
+  <div class="hpmini">
+    <div><div class="small-label" style="color:var(--red)">P1 HP</div>
+      <div class="hpbar-wrap"><div class="hpbar" id="rs-p1hp" style="background:var(--red)"></div></div></div>
+    <div><div class="small-label" style="color:var(--blue)">P2 HP</div>
+      <div class="hpbar-wrap"><div class="hpbar" id="rs-p2hp" style="background:var(--blue)"></div></div></div>
+  </div>
+  <div class="panel small-label" id="rs-stats"></div>
+  <div class="scroll" id="rs-body"></div>
+  <button class="btn primary" onclick="afterRoundSummary()" id="rs-continue">Continue</button>
+</div>
+
+<div class="screen" id="scr-heal">
+  <h1>Round Over — Recovering</h1>
+  <div class="hpmini">
+    <div><div class="small-label" style="color:var(--red)">P1 HP</div>
+      <div class="hpbar-wrap"><div class="hpbar slow" id="heal-p1hp" style="background:var(--red)"></div></div></div>
+    <div><div class="small-label" style="color:var(--blue)">P2 HP</div>
+      <div class="hpbar-wrap"><div class="hpbar slow" id="heal-p2hp" style="background:var(--blue)"></div></div></div>
+  </div>
+  <p class="center muted" id="heal-caption"></p>
+</div>
+
+<div class="screen" id="scr-end">
+  <h1 id="end-title">Result</h1>
+  <div class="panel center" id="end-body"></div>
+  <div class="scroll" id="end-scroll"></div>
+  <button class="btn primary" onclick="location.reload()">Back to Menu</button>
+</div>
+
+</div>
+
+<div class="modal-backdrop" id="surrender-modal">
+  <div class="modal-box">
+    <h1 style="font-size:1.3em">Surrender?</h1>
+    <p class="muted center">Which player is giving up? This ends the match immediately.</p>
+    <button class="btn" style="background:var(--red);border-color:var(--red)" onclick="doSurrender(1)">Player 1 surrenders</button>
+    <button class="btn" style="background:var(--blue);border-color:var(--blue)" id="surrender-p2-btn" onclick="doSurrender(2)">Player 2 surrenders</button>
+    <button class="btn ghost" onclick="closeSurrenderModal()">Cancel, keep fighting</button>
+  </div>
+</div>
+
+<script>
+/* ---------- MOVE DATA ---------- */
+// weight: 'light' -> guard blocks fully. 'heavy' -> guard chips damage through (chipDmg).
+// sway: true -> evaded cleanly by sway. false -> catches a swaying opponent (lands, +catchBonus).
+const MOVES = {
+  jab:      {name:'Jab', spd:1, dmg:1, tgt:'head', sway:true,  weight:'light'},
+  straight: {name:'Straight', spd:2, dmg:2, tgt:'head', sway:true,  weight:'light'},
+  cross:    {name:'Cross', spd:2, dmg:2, tgt:'head', sway:true,  weight:'light'},
+  lhook:    {name:'Left Hook', spd:3, dmg:3, tgt:'head', sway:false, weight:'light', catchBonus:2, swayMatch:'left', grazeDmg:1},
+  rhook:    {name:'Right Hook', spd:3, dmg:3, tgt:'head', sway:false, weight:'light', catchBonus:2, swayMatch:'right', grazeDmg:1},
+  luppercut:{name:'Left Uppercut', spd:4, dmg:4, tgt:'head', sway:false, weight:'heavy', catchBonus:2, chipDmg:1, swayMatch:'left', grazeDmg:0},
+  ruppercut:{name:'Right Uppercut', spd:4, dmg:4, tgt:'head', sway:false, weight:'heavy', catchBonus:2, chipDmg:1, swayMatch:'right', grazeDmg:0},
+  loverhand:{name:'Left Overhand', spd:5, dmg:6, tgt:'head', sway:false, weight:'heavy', haymaker:true, chipDmg:3, swayMatch:'right', grazeDmg:0},
+  roverhand:{name:'Right Overhand', spd:5, dmg:6, tgt:'head', sway:false, weight:'heavy', haymaker:true, chipDmg:3, swayMatch:'left', grazeDmg:0},
+  lbody:    {name:'Left Body Shot', spd:2, dmg:2, tgt:'body', sway:false, weight:'light'},
+  rbody:    {name:'Right Body Shot', spd:2, dmg:2, tgt:'body', sway:false, weight:'light'},
+  guard:    {name:'Guard', def:true},
+  swayl:    {name:'Sway Left', def:true},
+  swayr:    {name:'Sway Right', def:true},
+};
+const MOVE_ORDER = ['jab','guard','straight','cross','lhook','rhook','luppercut','ruppercut','loverhand','roverhand','lbody','rbody','swayl','swayr'];
+// Moves whose momentum a jab can't stop -- jab vs these = trade, not interrupt.
+const JAB_IMMUNE = new Set(['lhook','rhook','lbody','rbody']);
+const COMBO_CAP = 3;
+
+/* ---------- STATE ---------- */
+let state = {
+  stance:{1:'normal',2:'normal'},
+  maxHp: 30,
+  hp:{1:30,2:30},
+  round:1, conflict:1,
+  picks:{1:[], 2:[]},
+  pending:[], selecting:1,
+  streak:{1:0,2:0}, priority:{1:false,2:false}, stunFlag:{1:false,2:false}, conflictDealt:{1:0,2:0},
+  matchStats:{1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}},
+  roundStats:{1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}},
+  roundWins:{1:0,2:0}, roundDraws:0,
+  roundLog:[], matchLog:[],
+  aiEnabled:false, aiDifficulty:'standard',
+  aiMemory:{jab:0,straight:0,cross:0,lhook:0,rhook:0,luppercut:0,ruppercut:0,loverhand:0,roverhand:0,lbody:0,rbody:0,guard:0,swayl:0,swayr:0}
+};
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');}
+
+function goSetup(){show('scr-setup');}
+function setStance(p,s){state.stance[p]=s;
+  document.getElementById('p'+p+'-normal').classList.toggle('selected',s==='normal');
+  document.getElementById('p'+p+'-south').classList.toggle('selected',s==='southpaw');}
+
+function setP2Type(type){
+  state.aiEnabled = (type==='ai');
+  document.getElementById('p2-human').classList.toggle('selected', type==='human');
+  document.getElementById('p2-ai').classList.toggle('selected', type==='ai');
+  document.getElementById('p2-human-panel').style.display = type==='human' ? 'block' : 'none';
+  document.getElementById('p2-ai-panel').style.display = type==='ai' ? 'block' : 'none';
+  if(type==='ai'){
+    state.stance[2] = Math.random()<0.75 ? 'southpaw' : 'normal';
+    document.getElementById('ai-stance-label').textContent = 'AI has chosen: '+state.stance[2];
+  }
+}
+function setDifficulty(d){
+  state.aiDifficulty = d;
+  document.getElementById('diff-standard').classList.toggle('selected', d==='standard');
+  document.getElementById('diff-hard').classList.toggle('selected', d==='hard');
+}
+
+function startMatch(){
+  state.hp={1:30,2:30}; state.round=1; state.conflict=1; state.matchLog=[]; state.roundLog=[];
+  state.streak={1:0,2:0}; state.priority={1:false,2:false}; state.stunFlag={1:false,2:false}; state.conflictDealt={1:0,2:0};
+  state.matchStats={1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}};
+  state.roundStats={1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}};
+  state.roundWins={1:0,2:0}; state.roundDraws=0;
+  state.aiMemory={jab:0,straight:0,cross:0,lhook:0,rhook:0,luppercut:0,ruppercut:0,loverhand:0,roverhand:0,lbody:0,rbody:0,guard:0,swayl:0,swayr:0};
+  beginSelection(1);
+}
+
+function askSurrender(){
+  document.getElementById('surrender-p2-btn').style.display = state.aiEnabled ? 'none' : 'block';
+  document.getElementById('surrender-modal').classList.add('show');
+}
+function closeSurrenderModal(){
+  document.getElementById('surrender-modal').classList.remove('show');
+}
+function doSurrender(who){
+  closeSurrenderModal();
+  endMatch(who===1?2:1, false, true);
+}
+
+/* ---------- SELECTION FLOW ---------- */
+function beginSelection(player){
+  state.selecting=player; state.pending=[];
+  document.getElementById('pass-title').textContent = 'Player '+player+"'s turn";
+  document.getElementById('pass-text').textContent = player===1
+    ? "Hand the device to Player 1. Don't let Player 2 see!"
+    : "Now hand it to Player 2. Don't let Player 1 see!";
+  document.getElementById('pass-btn').style.background = player===1?'var(--red)':'var(--blue)';
+  show('scr-pass');
+}
+
+function revealSelect(){
+  const p = state.selecting;
+  document.getElementById('sel-title').innerHTML = 'Player '+p+': Pick 3 moves ('+state.stance[p]+')';
+  document.getElementById('sel-title').style.color = p===1?'var(--red)':'var(--blue)';
+  renderMoveGrid();
+  renderSlots();
+  show('scr-select');
+}
+
+function renderMoveGrid(){
+  const grid = document.getElementById('movegrid');
+  grid.innerHTML='';
+  MOVE_ORDER.forEach(id=>{
+    const b=document.createElement('button');
+    b.className='btn small';
+    b.textContent=MOVES[id].name;
+    b.onclick=()=>pickMove(id);
+    if(state.pending.length>=3) b.disabled=true;
+    grid.appendChild(b);
+  });
+}
+function pickMove(id){
+  if(state.pending.length>=3) return;
+  state.pending.push(id);
+  renderSlots(); renderMoveGrid();
+  document.getElementById('confirm-btn').disabled = state.pending.length!==3;
+}
+function undoMove(){ state.pending.pop(); renderSlots(); renderMoveGrid();
+  document.getElementById('confirm-btn').disabled = state.pending.length!==3;}
+function renderSlots(){
+  const wrap=document.getElementById('sel-slots'); wrap.innerHTML='';
+  for(let i=0;i<3;i++){
+    const d=document.createElement('div');
+    d.className='slot'+(state.pending[i]?' filled':'');
+    d.textContent = state.pending[i]?MOVES[state.pending[i]].name:(i+1);
+    wrap.appendChild(d);
+  }
+}
+function confirmMoves(){
+  state.picks[state.selecting] = state.pending.slice();
+  if(state.selecting===1){
+    if(state.aiEnabled){ state.picks[2] = aiPickMoves(); runConflict(); }
+    else { beginSelection(2); }
+  }
+  else { runConflict(); }
+}
+
+/* ---------- PICTOGRAM ---------- */
+function figureSVG(color, pose, facing){
+  const f = facing;
+  let armF = "M50,55 L"+(50+30*f)+",50";
+  let armB = "M50,55 L"+(50-14*f)+",60";
+  let lean = 0;
+  if(pose==='hook'){ armF = "M50,55 L"+(50+22*f)+",38"; }
+  else if(pose==='upper'){ armF = "M50,58 L"+(50+18*f)+",32"; }
+  else if(pose==='body'){ armF = "M50,58 L"+(50+26*f)+",66"; }
+  else if(pose==='overhand'){ armF = "M50,48 L"+(50+30*f)+",28"; }
+  else if(pose==='guard'){ armF="M50,55 L"+(50+12*f)+",34"; armB="M50,55 L"+(50-12*f)+",34"; }
+  else if(pose==='sway-l'){ lean=-10; }
+  else if(pose==='sway-r'){ lean=10; }
+  return `<svg viewBox="0 0 100 120" width="70" height="100" style="transform:rotate(${lean}deg)">
+    <circle cx="50" cy="20" r="12" fill="${color}"/>
+    <line x1="50" y1="32" x2="50" y2="70" stroke="${color}" stroke-width="8" stroke-linecap="round"/>
+    <path d="${armB}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="${armF}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <line x1="46" y1="70" x2="40" y2="105" stroke="${color}" stroke-width="7" stroke-linecap="round"/>
+    <line x1="54" y1="70" x2="60" y2="105" stroke="${color}" stroke-width="7" stroke-linecap="round"/>
+  </svg>`;
+}
+function poseFor(moveId){
+  const m = MOVES[moveId];
+  if(m.def){
+    if(moveId==='swayl') return 'sway-l';
+    if(moveId==='swayr') return 'sway-r';
+    return 'guard';
+  }
+  if(moveId==='loverhand'||moveId==='roverhand') return 'overhand';
+  if(m.tgt==='body') return 'body';
+  if(moveId==='lhook'||moveId==='rhook') return 'hook';
+  if(moveId==='luppercut'||moveId==='ruppercut') return 'upper';
+  return 'straight';
+}
+function drawFig(slot, color, pose, flash){
+  const cls = flash==='win'?'flash-win':flash==='lose'?'flash-lose':'';
+  document.getElementById(slot).innerHTML = `<div class="${cls}">${figureSVG(color,pose, slot==='fig1'?1:-1)}</div>`;
+}
+
+/* ---------- AI OPPONENT ---------- */
+// Base preference weights, before any situational adjustment.
+const AI_BASE_WEIGHT = {
+  jab:10, straight:8, cross:8, lhook:9, rhook:9, luppercut:7, ruppercut:7,
+  loverhand:5, roverhand:5, lbody:7, rbody:7, guard:10, swayl:8, swayr:8
+};
+
+// Reads P1's revealed move history (Hard mode only) to bias future defense/offense.
+function computeAIBias(){
+  const m = state.aiMemory;
+  const light = m.jab+m.straight+m.cross;
+  const guard = m.guard;
+  const sway = m.swayl+m.swayr;
+  const other = m.lhook+m.rhook+m.luppercut+m.ruppercut+m.loverhand+m.roverhand+m.lbody+m.rbody;
+  const total = light+guard+sway+other || 1;
+  return { lightRate: light/total, guardRate: guard/total, swayRate: sway/total };
+}
+
+function weightedPick(weights){
+  const entries = Object.entries(weights);
+  const total = entries.reduce((s,[,w])=>s+w, 0);
+  let r = Math.random()*total;
+  for(const [id,w] of entries){ r -= w; if(r<=0) return id; }
+  return entries[entries.length-1][0];
+}
+
+// Picks 3 moves for the AI. Only ever reads the AI's OWN carried-over state
+// (its HP, its streak, its priority/stun flags from the end of the previous
+// conflict, and P1's history from ALREADY-REVEALED past conflicts) -- never
+// this conflict's Player 1 picks, which don't exist to the AI until reveal.
+function aiPickMoves(){
+  const diff = state.aiDifficulty;
+  const cfg = diff==='hard' ? {
+    noise:[0.9,1.1], lowHpGuard:2.4, lowHpSway:1.7, lowHpHaymakerCut:0.4, lowHpHeavyCut:0.8,
+    pressHaymaker:2.0, pressHeavy:1.4, pressDefCut:0.65,
+    streakAtkBoost:1.35, streakDefCut:0.7,
+    priOverhandBoost:4.5, priAtkCut:0.6,
+    stunGuardBoost:6, stunAtkCut:0.2,
+    biasOn:true
+  } : {
+    noise:[0.55,1.45], lowHpGuard:1.5, lowHpSway:1.3, lowHpHaymakerCut:0.75, lowHpHeavyCut:0.95,
+    pressHaymaker:1.25, pressHeavy:1.1, pressDefCut:0.9,
+    streakAtkBoost:1.1, streakDefCut:0.92,
+    priOverhandBoost:2.0, priAtkCut:0.85,
+    stunGuardBoost:2.5, stunAtkCut:0.55,
+    biasOn:false
+  };
+  const bias = cfg.biasOn ? computeAIBias() : {lightRate:0, guardRate:0, swayRate:0};
+  const hp2Frac = state.hp[2]/state.maxHp;
+  const hp1Frac = state.hp[1]/state.maxHp;
+  const enteringPriority = state.priority[2];
+  const enteringStun = state.stunFlag[2];
+  const picks = [];
+
+  for(let slot=0; slot<3; slot++){
+    const weights = {};
+    MOVE_ORDER.forEach(id=>{
+      const m = MOVES[id];
+      let w = AI_BASE_WEIGHT[id];
+
+      if(hp2Frac < 0.35){
+        if(id==='guard') w*=cfg.lowHpGuard;
+        else if(id==='swayl'||id==='swayr') w*=cfg.lowHpSway;
+        else if(m.haymaker) w*=cfg.lowHpHaymakerCut;
+        else if(m.weight==='heavy') w*=cfg.lowHpHeavyCut;
+      }
+      if(hp1Frac < 0.25){
+        if(m.haymaker) w*=cfg.pressHaymaker;
+        else if(m.weight==='heavy') w*=cfg.pressHeavy;
+        else if(m.def) w*=cfg.pressDefCut;
+      }
+      if(state.streak[2]>=1){
+        if(!m.def && id!=='jab') w*=cfg.streakAtkBoost;
+        else if(m.def) w*=cfg.streakDefCut;
+      }
+      // Carry-over from the previous conflict's final beat -- only meaningful on slot 0.
+      if(slot===0 && enteringPriority){
+        if(id==='loverhand'||id==='roverhand') w*=cfg.priOverhandBoost;
+        else if(!m.def) w*=cfg.priAtkCut;
+      }
+      if(slot===0 && enteringStun){
+        if(id==='guard') w*=cfg.stunGuardBoost;
+        else if(!m.def) w*=cfg.stunAtkCut;
+      }
+      if(cfg.biasOn){
+        if(id==='swayl'||id==='swayr') w *= (1+bias.lightRate*1.5);
+        if(id==='guard') w *= (1+(1-bias.lightRate)*0.8);
+        if(id==='luppercut'||id==='ruppercut'||id==='loverhand'||id==='roverhand') w *= (1+bias.guardRate*1.2);
+        if(id==='lhook'||id==='rhook'||id==='luppercut'||id==='ruppercut') w *= (1+bias.swayRate*1.0);
+      }
+      const noise = cfg.noise[0] + Math.random()*(cfg.noise[1]-cfg.noise[0]);
+      weights[id] = Math.max(0.01, w*noise);
+    });
+    picks.push(weightedPick(weights));
+  }
+  return picks;
+}
+
+/* ---------- CONFLICT RESOLUTION ---------- */
+function runConflict(){
+  state.conflictDealt = {1:0,2:0};
+  const aiTag = state.aiEnabled ? ' • AI: '+state.aiDifficulty+' ('+state.stance[2]+')' : '';
+  document.getElementById('rc-label').textContent = 'Round '+state.round+' • Conflict '+state.conflict+'/3'+aiTag;
+  updateHpUI();
+  document.getElementById('beatlogs').innerHTML='';
+  drawFig('fig1','var(--red)','idle');
+  drawFig('fig2','var(--blue)','idle');
+  document.getElementById('next-btn').style.display='block';
+  document.getElementById('next-btn').onclick = nextStep;
+  state.beatIndex = 0;
+  state.beatEvents = computeBeats();
+  show('scr-fight');
+  document.getElementById('next-btn').textContent='Reveal Beat 1';
+}
+
+function comboBonus(player){ return Math.min(state.streak[player], COMBO_CAP); }
+
+function finalizeClean(player, moveId, baseDmg){
+  let dmg = baseDmg;
+  let bonusTxt = '';
+  if(moveId!=='jab'){
+    const b = comboBonus(player);
+    if(b>0){ dmg += b; bonusTxt = ' (+'+b+' combo)'; }
+  }
+  return {dmg, bonusTxt};
+}
+
+function computeBeats(){
+  const events=[];
+  for(let i=0;i<3;i++){
+    const m1id = state.picks[1][i], m2id = state.picks[2][i];
+    const m1 = MOVES[m1id], m2 = MOVES[m2id];
+    const s1 = state.stunFlag[1], s2 = state.stunFlag[2];
+    const pri1 = state.priority[1], pri2 = state.priority[2];
+    const active1 = !(s1 && !m1.def);
+    const active2 = !(s2 && !m2.def);
+
+    let dmg1to2=0, dmg2to1=0, clean1=false, clean2=false, note1='', note2='';
+    let evadedBy1=false, evadedBy2=false, graze1=false, graze2=false;
+
+    if(s1 && !m1.def) note1='P1 stunned, flinches!';
+    if(s2 && !m2.def) note2='P2 stunned, flinches!';
+
+    if(m1.def && m2.def){
+      note1 = note1 || (m1.name+' — no contact');
+      note2 = note2 || (m2.name+' — no contact');
+    } else if(m1.def && !m2.def){
+      if(active2){
+        const r = resolveAtkVsDef(m2, m1id);
+        clean2 = r.clean; graze2 = !!r.graze;
+        if(r.clean){ const f=finalizeClean(2,m2id,r.dmg); dmg2to1=f.dmg; note2=r.text+f.bonusTxt; }
+        else { dmg2to1=r.dmg; note2=r.text; }
+        if(r.evaded) evadedBy1=true;
+      } else { note2 = note2; }
+      note1 = note1 || (dmg2to1===0? m1.name+' works!' : m1.name+' partly holds');
+    } else if(m2.def && !m1.def){
+      if(active1){
+        const r = resolveAtkVsDef(m1, m2id);
+        clean1 = r.clean; graze1 = !!r.graze;
+        if(r.clean){ const f=finalizeClean(1,m1id,r.dmg); dmg1to2=f.dmg; note1=r.text+f.bonusTxt; }
+        else { dmg1to2=r.dmg; note1=r.text; }
+        if(r.evaded) evadedBy2=true;
+      }
+      note2 = note2 || (dmg1to2===0? m2.name+' works!' : m2.name+' partly holds');
+    } else {
+      // both attack
+      const jabTrade = (m1id==='jab' && JAB_IMMUNE.has(m2id)) || (m2id==='jab' && JAB_IMMUNE.has(m1id));
+      if(!active1 && !active2){ /* nothing */ }
+      else if(active1 && !active2){ const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true; note1=m1.name+' lands clean!'+f.bonusTxt; }
+      else if(!active1 && active2){ const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true; note2=m2.name+' lands clean!'+f.bonusTxt; }
+      else if(jabTrade){
+        const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
+        dmg1to2=f1.dmg; dmg2to1=f2.dmg; clean1=true; clean2=true;
+        note1=m1.name+" can't stop the momentum — both land!"+f1.bonusTxt;
+        note2=m2.name+" muscles through — both land!"+f2.bonusTxt;
+      } else if(pri1 && !pri2){
+        const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true;
+        note1=m1.name+' lands first — timing priority!'+f.bonusTxt; note2=m2.name+' beaten to the punch, misses';
+      } else if(pri2 && !pri1){
+        const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true;
+        note2=m2.name+' lands first — timing priority!'+f.bonusTxt; note1=m1.name+' beaten to the punch, misses';
+      } else if(m1.spd < m2.spd){
+        const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true;
+        note1=m1.name+' lands first!'+f.bonusTxt; note2=m2.name+' interrupted, misses';
+      } else if(m2.spd < m1.spd){
+        const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true;
+        note2=m2.name+' lands first!'+f.bonusTxt; note1=m1.name+' interrupted, misses';
+      } else {
+        const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
+        dmg1to2=f1.dmg; dmg2to1=f2.dmg; clean1=true; clean2=true;
+        note1=m1.name+' trades!'+f1.bonusTxt; note2=m2.name+' trades!'+f2.bonusTxt;
+      }
+    }
+
+    // --- streak updates ---
+    if(!m1.def){
+      if(dmg1to2===0) state.streak[1]=0;
+      else if(clean1 && m1id!=='jab') state.streak[1]+=1;
+    }
+    if(!m2.def){
+      if(dmg2to1===0) state.streak[2]=0;
+      else if(clean2 && m2id!=='jab') state.streak[2]+=1;
+    }
+    // A graze (a hook that only just catches a correct sway, 1 dmg) doesn't break the defender's streak.
+    if(dmg2to1>0 && m2id!=='jab' && !graze2) state.streak[1]=0;
+    if(dmg1to2>0 && m1id!=='jab' && !graze1) state.streak[2]=0;
+
+    // --- stun for next beat ---
+    // Triggers on any single hit of 6+, OR 9+ cumulative damage dealt within this conflict,
+    // and continues (re-triggers) if a player who's already stunned gets hit again.
+    state.conflictDealt[1] += dmg1to2;
+    state.conflictDealt[2] += dmg2to1;
+    const newStun = {1:false,2:false};
+    if(s1 && dmg2to1>0) newStun[1]=true;
+    if(s2 && dmg1to2>0) newStun[2]=true;
+    if(dmg1to2>=6 || state.conflictDealt[1]>=9) newStun[2]=true;
+    if(dmg2to1>=6 || state.conflictDealt[2]>=9) newStun[1]=true;
+    state.stunFlag = newStun;
+
+    // --- priority for next beat ---
+    const newPri = {1:false,2:false};
+    if(evadedBy1) newPri[1]=true;
+    if(evadedBy2) newPri[2]=true;
+    state.priority = newPri;
+
+    // --- stats ---
+    if(!m1.def){ if(dmg1to2>0){ state.matchStats[1].landed++; state.roundStats[1].landed++; state.matchStats[1].dmg+=dmg1to2; state.roundStats[1].dmg+=dmg1to2; } else { state.matchStats[1].missed++; state.roundStats[1].missed++; } }
+    if(!m2.def){ if(dmg2to1>0){ state.matchStats[2].landed++; state.roundStats[2].landed++; state.matchStats[2].dmg+=dmg2to1; state.roundStats[2].dmg+=dmg2to1; } else { state.matchStats[2].missed++; state.roundStats[2].missed++; } }
+    if((m1id==='swayl'||m1id==='swayr') && !m2.def && dmg2to1===0){ state.matchStats[1].avoided++; state.roundStats[1].avoided++; }
+    if((m2id==='swayl'||m2id==='swayr') && !m1.def && dmg1to2===0){ state.matchStats[2].avoided++; state.roundStats[2].avoided++; }
+
+    events.push({m1id,m2id,dmg1to2,dmg2to1,note1,note2,
+      pose1:poseFor(m1id), pose2:poseFor(m2id)});
+  }
+  return events;
+}
+
+function resolveAtkVsDef(atk, defId){
+  if(defId==='guard'){
+    if(atk.weight==='heavy') return {dmg:atk.chipDmg!==undefined?atk.chipDmg:1, clean:false, text:atk.name+' chips through guard for '+(atk.chipDmg!==undefined?atk.chipDmg:1)+'!'};
+    return {dmg:0, clean:false, text:atk.name+' blocked by guard'};
+  }
+  // sway
+  if(atk.sway) return {dmg:0, clean:false, text:atk.name+' evaded by the sway!', evaded:true};
+  if(atk.swayMatch){
+    const swaySide = defId==='swayl' ? 'left' : 'right';
+    if(swaySide === atk.swayMatch){
+      // read correctly
+      if(atk.grazeDmg>0) return {dmg:atk.grazeDmg, clean:false, graze:true, evaded:true, text:atk.name+' grazes through for '+atk.grazeDmg};
+      return {dmg:0, clean:false, evaded:true, text:atk.name+' evaded by the sway!'};
+    }
+    // read wrong -- caught clean
+    const bonus = atk.catchBonus||0;
+    return {dmg:atk.dmg+bonus, clean:true, text:atk.name+' catches the sway'+(bonus?' for a brutal hit':'')+'!'};
+  }
+  // body shots -- sway never helps, either direction
+  return {dmg:atk.dmg, clean:true, text:atk.name+" — sway doesn't stop a body shot!"};
+}
+
+/* ---------- STEPPING THROUGH BEATS ---------- */
+function nextStep(){
+  const ev = state.beatEvents[state.beatIndex];
+  drawFig('fig1','var(--red)', ev.pose1, ev.dmg2to1>0?'lose':(ev.dmg1to2>0?'win':''));
+  drawFig('fig2','var(--blue)', ev.pose2, ev.dmg1to2>0?'lose':(ev.dmg2to1>0?'win':''));
+  state.hp[1] = Math.max(0, state.hp[1]-ev.dmg2to1);
+  state.hp[2] = Math.max(0, state.hp[2]-ev.dmg1to2);
+  updateHpUI();
+  const log = document.getElementById('beatlogs');
+  const d = document.createElement('div');
+  d.className='beatlog';
+  d.innerHTML = '<b>Beat '+(state.beatIndex+1)+':</b> '+MOVES[ev.m1id].name+' vs '+MOVES[ev.m2id].name+'<br>'+
+    '<span style="color:var(--red)">'+ev.note1+'</span> &nbsp; <span style="color:var(--blue)">'+ev.note2+'</span>';
+  log.appendChild(d);
+
+  if(state.hp[1]<=0 || state.hp[2]<=0){
+    document.getElementById('next-btn').style.display='none';
+    logConflict();
+    setTimeout(()=>endMatch(state.hp[1]<=0 && state.hp[2]<=0 ? 0 : (state.hp[1]<=0?2:1), true, false),600);
+    return;
+  }
+  state.beatIndex++;
+  if(state.beatIndex>=3){
+    document.getElementById('next-btn').textContent='Continue';
+    document.getElementById('next-btn').onclick = afterConflict;
+  } else {
+    document.getElementById('next-btn').textContent='Reveal Beat '+(state.beatIndex+1);
+  }
+}
+
+function logConflict(){
+  state.roundLog.push({
+    conflict: state.conflict,
+    p1moves: state.picks[1].map(id=>MOVES[id].name),
+    p2moves: state.picks[2].map(id=>MOVES[id].name),
+    beats: state.beatEvents,
+    hp1: state.hp[1], hp2: state.hp[2]
+  });
+}
+
+function afterConflict(){
+  logConflict();
+  if(state.aiEnabled){ state.picks[1].forEach(id=>{ state.aiMemory[id]++; }); }
+  state.conflict++;
+  if(state.conflict>3){ showRoundSummary(); return; }
+  beginSelection(1);
+}
+
+function showRoundSummary(){
+  const winner = roundWinner(state.roundStats[1], state.roundStats[2]);
+  if(winner===0) state.roundDraws++; else state.roundWins[winner]++;
+
+  document.getElementById('rs-title').textContent = 'Round '+state.round+' Summary';
+  document.getElementById('rs-p1hp').style.width = (state.hp[1]/state.maxHp*100)+'%';
+  document.getElementById('rs-p2hp').style.width = (state.hp[2]/state.maxHp*100)+'%';
+  const winTxt = winner===0 ? '<b>Round drawn — no points awarded</b>' :
+    '<b style="color:'+(winner===1?'var(--red)':'var(--blue)')+'">Player '+winner+' wins this round</b>';
+  document.getElementById('rs-stats').innerHTML = winTxt+'<br>'+
+    '<b style="color:var(--red)">P1</b> '+state.roundStats[1].dmg+' dmg, '+state.roundStats[1].landed+' landed / '+state.roundStats[1].missed+' missed<br>'+
+    '<b style="color:var(--blue)">P2</b> '+state.roundStats[2].dmg+' dmg, '+state.roundStats[2].landed+' landed / '+state.roundStats[2].missed+' missed<br>'+
+    '<span class="muted">Rounds won — P1: '+state.roundWins[1]+' &nbsp; P2: '+state.roundWins[2]+'</span>';
+
+  const body = document.getElementById('rs-body');
+  body.innerHTML='';
+  state.roundLog.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='conflictBlock';
+    let beatHtml = c.beats.map((b,i)=>
+      '<div style="margin:2px 0"><b>B'+(i+1)+':</b> '+
+      '<span style="color:var(--red)">'+b.note1+'</span> / '+
+      '<span style="color:var(--blue)">'+b.note2+'</span></div>').join('');
+    div.innerHTML = '<b>Conflict '+c.conflict+'</b><br>'+
+      '<span class="muted">P1: '+c.p1moves.join(', ')+'<br>P2: '+c.p2moves.join(', ')+'</span>'+
+      beatHtml+
+      '<div class="muted">HP after: P1 '+c.hp1+' / P2 '+c.hp2+'</div>';
+    body.appendChild(div);
+  });
+  state.matchLog.push({round: state.round, hp1: state.hp[1], hp2: state.hp[2], winner: winner,
+    stats1:{...state.roundStats[1]}, stats2:{...state.roundStats[2]}, conflicts: state.roundLog});
+  document.getElementById('rs-continue').textContent = state.round>=3 ? 'See Match Summary' : 'Continue';
+  show('scr-roundsum');
+}
+
+function afterRoundSummary(){
+  // hpLost for a player = damage the OPPONENT dealt them this round.
+  const hpLost1 = state.roundStats[2].dmg, hpLost2 = state.roundStats[1].dmg;
+  state.regenAmount = {
+    1: Math.floor(hpLost1*0.2) + state.roundStats[1].avoided,
+    2: Math.floor(hpLost2*0.2) + state.roundStats[2].avoided
+  };
+  state.roundLog=[];
+  state.roundStats={1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}};
+  if(state.round>=3){
+    endMatch(decideWinner(), false, false);
+    return;
+  }
+  playHealAnimation();
+}
+
+function playHealAnimation(){
+  const oldHp1=state.hp[1], oldHp2=state.hp[2];
+  document.getElementById('heal-p1hp').style.transition='none';
+  document.getElementById('heal-p2hp').style.transition='none';
+  document.getElementById('heal-p1hp').style.width = (oldHp1/state.maxHp*100)+'%';
+  document.getElementById('heal-p2hp').style.width = (oldHp2/state.maxHp*100)+'%';
+  show('scr-heal');
+  document.getElementById('heal-caption').innerHTML =
+    '<span style="color:var(--red)">P1 +'+state.regenAmount[1]+' HP</span> &nbsp; '+
+    '<span style="color:var(--blue)">P2 +'+state.regenAmount[2]+' HP</span><br>'+
+    '20% of HP lost this round, +1 per strike fully swayed or guarded';
+  const newHp1 = Math.min(state.maxHp, oldHp1+state.regenAmount[1]);
+  const newHp2 = Math.min(state.maxHp, oldHp2+state.regenAmount[2]);
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      document.getElementById('heal-p1hp').style.transition='';
+      document.getElementById('heal-p2hp').style.transition='';
+      document.getElementById('heal-p1hp').style.width = (newHp1/state.maxHp*100)+'%';
+      document.getElementById('heal-p2hp').style.width = (newHp2/state.maxHp*100)+'%';
+    });
+  });
+  setTimeout(()=>{
+    state.hp[1]=newHp1; state.hp[2]=newHp2;
+    state.round++; state.conflict=1;
+    beginSelection(1);
+  }, 1500);
+}
+
+function updateHpUI(){
+  document.getElementById('p1hp').style.width = (state.hp[1]/state.maxHp*100)+'%';
+  document.getElementById('p2hp').style.width = (state.hp[2]/state.maxHp*100)+'%';
+  document.getElementById('p1hp-txt').textContent = state.hp[1];
+  document.getElementById('p2hp-txt').textContent = state.hp[2];
+}
+
+// Scores a single round: damage dealt first, then accuracy, then raw shots landed.
+function roundWinner(s1, s2){
+  if(s1.dmg !== s2.dmg) return s1.dmg > s2.dmg ? 1 : 2;
+  const acc1 = s1.landed/((s1.landed+s1.missed)||1);
+  const acc2 = s2.landed/((s2.landed+s2.missed)||1);
+  if(acc1 !== acc2) return acc1 > acc2 ? 1 : 2;
+  if(s1.landed !== s2.landed) return s1.landed > s2.landed ? 1 : 2;
+  return 0;
+}
+
+// Decides the match: most rounds won. Ties broken by total match damage, then a draw.
+function decideWinner(){
+  if(state.roundWins[1] !== state.roundWins[2]) return state.roundWins[1] > state.roundWins[2] ? 1 : 2;
+  if(state.matchStats[1].dmg !== state.matchStats[2].dmg) return state.matchStats[1].dmg > state.matchStats[2].dmg ? 1 : 2;
+  return 0;
+}
+
+function endMatch(winner, ko, surrendered){
+  const body = document.getElementById('end-body');
+  let title = winner===0 ? "It's a Draw!" : 'Player '+winner+' Wins!';
+  document.getElementById('end-title').textContent = title;
+  document.getElementById('end-title').style.color = winner===1?'var(--red)':winner===2?'var(--blue)':'var(--text)';
+  body.innerHTML = (ko? '<p><b>KNOCKOUT!</b></p>':'') + (surrendered? '<p><b>Opponent surrendered.</b></p>':'') +
+    '<p><b>Rounds won</b> — P1: '+state.roundWins[1]+' &nbsp; P2: '+state.roundWins[2]+(state.roundDraws?' &nbsp; Draws: '+state.roundDraws:'')+'</p>'+
+    '<p>Final HP — P1: '+state.hp[1]+' &nbsp; P2: '+state.hp[2]+'</p>'+
+    '<p class="muted">Total damage — P1: '+state.matchStats[1].dmg+' ('+state.matchStats[1].landed+' landed / '+state.matchStats[1].missed+' missed)<br>'+
+    'P2: '+state.matchStats[2].dmg+' ('+state.matchStats[2].landed+' landed / '+state.matchStats[2].missed+' missed)</p>';
+
+  const sc = document.getElementById('end-scroll');
+  if(state.matchLog.length){
+    let rows = state.matchLog.map(r=>{
+      const w = r.winner===0?'Draw':('P'+r.winner);
+      return '<tr><td>'+r.round+'</td><td>'+w+'</td><td>'+r.hp1+'</td><td>'+r.hp2+'</td><td>'+r.stats1.dmg+'</td><td>'+r.stats2.dmg+'</td></tr>';
+    }).join('');
+    sc.innerHTML = '<b class="center" style="display:block">Round-by-round</b>'+
+      '<table class="sumtable"><tr><th>Rd</th><th>Won</th><th>P1 HP</th><th>P2 HP</th><th>P1 Dmg</th><th>P2 Dmg</th></tr>'+rows+'</table>';
+  } else { sc.innerHTML=''; }
+  show('scr-end');
+}
+</script>
+</body>
+</html>
