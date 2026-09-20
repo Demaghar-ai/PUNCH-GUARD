@@ -43,8 +43,18 @@ h1 span{color:var(--red);}
 .fig-wrap{width:70px;height:100px;flex:none;}
 .arena{display:flex;justify-content:space-around;align-items:flex-end;margin:14px 0;}
 .beatlog{background:var(--panel2);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:.88em;}
-.flash-win{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #fff);}
-.flash-lose{opacity:.5;}
+.beatlog .beatnum{text-align:center;font-size:.75em;color:var(--muted);margin-bottom:2px;}
+.beatlog .beatmoves{display:flex;justify-content:space-between;font-size:1.05em;margin-bottom:5px;}
+.beatlog .beatoutcome{display:flex;justify-content:space-between;gap:8px;font-size:.85em;}
+.beatlog .beatoutcome > div{flex:1;}
+.beatlog .beatoutcome > div:last-child{text-align:right;}
+.glow-hit{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #fff);}
+.anim-hit{animation:shakeAnim .4s ease;}
+.anim-lunge-r{animation:lungeR .35s ease;}
+.anim-lunge-l{animation:lungeL .35s ease;}
+@keyframes shakeAnim{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes lungeR{0%{transform:translateX(0)}40%{transform:translateX(10px)}100%{transform:translateX(0)}}
+@keyframes lungeL{0%{transform:translateX(0)}40%{transform:translateX(-10px)}100%{transform:translateX(0)}}
 .scroll{max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--panel);}
 .conflictBlock{border-bottom:1px solid var(--line);padding:8px 0;}
 .conflictBlock:last-child{border-bottom:none;}
@@ -60,6 +70,10 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:50;}
 .modal-backdrop.show{display:flex;}
 .modal-box{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:18px;width:88%;max-width:360px;}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0;}
+.twocol .col{background:var(--panel2);border-radius:10px;padding:10px 12px;font-size:.85em;text-align:left;}
+.twocol .col b{display:block;font-size:1em;margin-bottom:4px;}
+.roundline{font-size:1.25em;font-weight:bold;text-align:center;margin:4px 0;letter-spacing:1px;}
 </style>
 </head>
 <body>
@@ -88,23 +102,41 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
     Guard fully blocks light shots (jab, straight, cross, hooks, body shots).
     Heavy shots (uppercuts, overhand) still chip 1-3 damage through.
     <h3>Sway</h3>
-    Swaying (either direction) cleanly dodges jab, straight, cross. Hooks,
-    uppercuts, body shots and the overhand cross all catch a sway and land —
-    hooks/uppercuts hit <b>extra hard</b> when they catch you leaning.
-    A successful sway also gives you <b>timing priority</b> on your very next
-    move, letting it land first regardless of speed — great for setting up an
-    overhand.
-    <h3>Combos</h3>
-    Landing clean hits builds a damage streak (up to +3) that carries across
-    the whole match. Getting hit by anything other than a jab resets your
-    streak. Jab itself never builds or breaks a streak — it can't carry a
-    fight on its own.
+    Sway (either direction) always dodges Jab, Straight, and Cross. Hooks,
+    Uppercuts, and Overhand only get dodged if you sway the <b>matching</b>
+    side (a Left Hook is beaten by Sway Left) — the wrong side gets you
+    caught clean. A caught Hook or Uppercut hits <b>extra hard</b>. Overhand
+    is the exception: it's beaten by the <b>opposite</b>-side sway (Sway
+    Left dodges a <i>Right</i> Overhand). Body shots are never dodged by
+    sway, either way. A successful sway also gives you <b>timing
+    priority</b> on your very next move, letting it land first regardless
+    of speed.
+    <h3>Damage Combo</h3>
+    Landing clean hits builds a damage bonus (up to +3) added to your
+    damage. Getting hit by anything other than a jab resets it, and it
+    resets fully at the start of every round. Jab itself never builds or
+    breaks it — it can't carry a fight on its own.
+    <h3>Power Chain &amp; Speed Chain</h3>
+    A landed punch sets up a bonus for your very next strike if it comes
+    from the <b>opposite hand</b> (Jab/Straight lead into a Cross, and back
+    — this flips in southpaw). A successful sway sets up a bonus for a
+    strike from the <b>same side</b> you swayed. Each link raises the bonus
+    by 1, capped at +3. <b>Speed Chain</b> reduces your move's effective
+    speed by that amount in a clash. <b>Power Chain</b> adds the same
+    amount as flat bonus damage to anything you land — clean, through
+    guard, even a graze. Choosing Guard wipes it out; taking non-jab
+    damage wipes it out; a trade lands the bonus but ends the chain right
+    after. Punching through guard keeps it alive. Throwing an Overhand
+    always ends the chain, whether it lands or not — it's a finisher, not
+    a link. Resets fully at the start of every round.
     <h3>Special: Jab vs Hooks/Body Shots</h3>
     A jab can't stop a hook or body shot's momentum — if a jab meets one of
     these, both punches land.
-    <h3>Haymaker</h3>
-    A clean, unguarded overhand cross stuns the opponent's next beat — if
-    they'd picked Guard they still cover up fine, otherwise their move fails.
+    <h3>Stun</h3>
+    Any single beat that deals 6+ damage stuns the opponent's next beat, and
+    so does dealing 9+ total damage within one conflict. A stunned player
+    can still Guard or Sway normally — those still work fine — but any
+    attack they'd picked just fails to come out.
     <h3>Health & Rounds</h3>
     Each fighter has 30 HP. Between rounds, they recover 20% of the HP they
     lost that round (rounded down), plus 1 HP for every strike they fully
@@ -226,9 +258,8 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
 <div class="modal-backdrop" id="surrender-modal">
   <div class="modal-box">
     <h1 style="font-size:1.3em">Surrender?</h1>
-    <p class="muted center">Which player is giving up? This ends the match immediately.</p>
-    <button class="btn" style="background:var(--red);border-color:var(--red)" onclick="doSurrender(1)">Player 1 surrenders</button>
-    <button class="btn" style="background:var(--blue);border-color:var(--blue)" id="surrender-p2-btn" onclick="doSurrender(2)">Player 2 surrenders</button>
+    <p class="muted center">This ends the match immediately as a No Contest.</p>
+    <button class="btn" style="background:var(--panel2);border-color:var(--line)" onclick="doSurrender()">Surrender</button>
     <button class="btn ghost" onclick="closeSurrenderModal()">Cancel, keep fighting</button>
   </div>
 </div>
@@ -253,10 +284,19 @@ const MOVES = {
   swayl:    {name:'Sway Left', def:true},
   swayr:    {name:'Sway Right', def:true},
 };
-const MOVE_ORDER = ['jab','guard','straight','cross','lhook','rhook','luppercut','ruppercut','loverhand','roverhand','lbody','rbody','swayl','swayr'];
+const MOVE_ORDER = ['jab','guard','swayl','swayr','straight','cross','lbody','rbody','lhook','rhook','luppercut','ruppercut','loverhand','roverhand'];
 // Moves whose momentum a jab can't stop -- jab vs these = trade, not interrupt.
 const JAB_IMMUNE = new Set(['lhook','rhook','lbody','rbody']);
 const COMBO_CAP = 3;
+
+// Which hand throws a move. Jab/Straight/Cross flip with stance; everything else is fixed.
+function handOf(moveId, stance){
+  if(moveId==='jab' || moveId==='straight') return stance==='normal' ? 'left' : 'right';
+  if(moveId==='cross') return stance==='normal' ? 'right' : 'left';
+  if(moveId==='lhook'||moveId==='luppercut'||moveId==='loverhand'||moveId==='lbody') return 'left';
+  if(moveId==='rhook'||moveId==='ruppercut'||moveId==='roverhand'||moveId==='rbody') return 'right';
+  return null; // guard/sway have no hand
+}
 
 /* ---------- STATE ---------- */
 let state = {
@@ -267,10 +307,13 @@ let state = {
   picks:{1:[], 2:[]},
   pending:[], selecting:1,
   streak:{1:0,2:0}, priority:{1:false,2:false}, stunFlag:{1:false,2:false}, conflictDealt:{1:0,2:0},
+  setup:{1:null,2:null}, // combo-chain speed bonus: {allowed:[ids], level:N} or null
+  knockdownCount:{1:0,2:0}, // persists whole match -- drives KO chance
+  knockdownFlagRound:{1:false,2:false}, // reset each round
   matchStats:{1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}},
   roundStats:{1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}},
-  roundWins:{1:0,2:0}, roundDraws:0,
-  roundLog:[], matchLog:[],
+  roundWins:{1:0,2:0}, roundDraws:0, roundResults:[],
+  roundLog:[], matchLog:[], currentConflictBeats:[],
   aiEnabled:false, aiDifficulty:'standard',
   aiMemory:{jab:0,straight:0,cross:0,lhook:0,rhook:0,luppercut:0,ruppercut:0,loverhand:0,roverhand:0,lbody:0,rbody:0,guard:0,swayl:0,swayr:0}
 };
@@ -300,9 +343,15 @@ function setDifficulty(d){
   document.getElementById('diff-hard').classList.toggle('selected', d==='hard');
 }
 
+function resetRoundScopedState(){
+  state.streak={1:0,2:0}; state.priority={1:false,2:false}; state.stunFlag={1:false,2:false};
+  state.setup={1:null,2:null}; state.knockdownFlagRound={1:false,2:false};
+}
+
 function startMatch(){
-  state.hp={1:30,2:30}; state.round=1; state.conflict=1; state.matchLog=[]; state.roundLog=[];
-  state.streak={1:0,2:0}; state.priority={1:false,2:false}; state.stunFlag={1:false,2:false}; state.conflictDealt={1:0,2:0};
+  state.hp={1:30,2:30}; state.round=1; state.conflict=1; state.matchLog=[]; state.roundLog=[]; state.roundResults=[];
+  state.conflictDealt={1:0,2:0}; state.knockdownCount={1:0,2:0};
+  resetRoundScopedState();
   state.matchStats={1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}};
   state.roundStats={1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}};
   state.roundWins={1:0,2:0}; state.roundDraws=0;
@@ -311,15 +360,14 @@ function startMatch(){
 }
 
 function askSurrender(){
-  document.getElementById('surrender-p2-btn').style.display = state.aiEnabled ? 'none' : 'block';
   document.getElementById('surrender-modal').classList.add('show');
 }
 function closeSurrenderModal(){
   document.getElementById('surrender-modal').classList.remove('show');
 }
-function doSurrender(who){
+function doSurrender(){
   closeSurrenderModal();
-  endMatch(who===1?2:1, false, true);
+  endMatch(0, false, true);
 }
 
 /* ---------- SELECTION FLOW ---------- */
@@ -393,6 +441,7 @@ function figureSVG(color, pose, facing){
   else if(pose==='guard'){ armF="M50,55 L"+(50+12*f)+",34"; armB="M50,55 L"+(50-12*f)+",34"; }
   else if(pose==='sway-l'){ lean=-10; }
   else if(pose==='sway-r'){ lean=10; }
+  else if(pose==='down'){ lean = 20*f; }
   return `<svg viewBox="0 0 100 120" width="70" height="100" style="transform:rotate(${lean}deg)">
     <circle cx="50" cy="20" r="12" fill="${color}"/>
     <line x1="50" y1="32" x2="50" y2="70" stroke="${color}" stroke-width="8" stroke-linecap="round"/>
@@ -415,9 +464,13 @@ function poseFor(moveId){
   if(moveId==='luppercut'||moveId==='ruppercut') return 'upper';
   return 'straight';
 }
-function drawFig(slot, color, pose, flash){
-  const cls = flash==='win'?'flash-win':flash==='lose'?'flash-lose':'';
-  document.getElementById(slot).innerHTML = `<div class="${cls}">${figureSVG(color,pose, slot==='fig1'?1:-1)}</div>`;
+// dealt = this player dealt damage this beat (lunge). hit = this player took damage (shake + glow).
+function drawFig(slot, color, pose, dealt, hit, facingRight){
+  const wrap = document.getElementById(slot);
+  let cls = '';
+  if(hit) cls = 'glow-hit anim-hit';
+  else if(dealt) cls = facingRight ? 'anim-lunge-r' : 'anim-lunge-l';
+  wrap.innerHTML = `<div class="${cls}">${figureSVG(color,pose, facingRight?1:-1)}</div>`;
 }
 
 /* ---------- AI OPPONENT ---------- */
@@ -521,16 +574,16 @@ function aiPickMoves(){
 /* ---------- CONFLICT RESOLUTION ---------- */
 function runConflict(){
   state.conflictDealt = {1:0,2:0};
+  state.currentConflictBeats = [];
   const aiTag = state.aiEnabled ? ' • AI: '+state.aiDifficulty+' ('+state.stance[2]+')' : '';
   document.getElementById('rc-label').textContent = 'Round '+state.round+' • Conflict '+state.conflict+'/3'+aiTag;
   updateHpUI();
   document.getElementById('beatlogs').innerHTML='';
-  drawFig('fig1','var(--red)','idle');
-  drawFig('fig2','var(--blue)','idle');
+  drawFig('fig1','var(--red)','idle',false,false,true);
+  drawFig('fig2','var(--blue)','idle',false,false,false);
   document.getElementById('next-btn').style.display='block';
   document.getElementById('next-btn').onclick = nextStep;
   state.beatIndex = 0;
-  state.beatEvents = computeBeats();
   show('scr-fight');
   document.getElementById('next-btn').textContent='Reveal Beat 1';
 }
@@ -547,119 +600,161 @@ function finalizeClean(player, moveId, baseDmg){
   return {dmg, bonusTxt};
 }
 
-function computeBeats(){
-  const events=[];
-  for(let i=0;i<3;i++){
-    const m1id = state.picks[1][i], m2id = state.picks[2][i];
-    const m1 = MOVES[m1id], m2 = MOVES[m2id];
-    const s1 = state.stunFlag[1], s2 = state.stunFlag[2];
-    const pri1 = state.priority[1], pri2 = state.priority[2];
-    const active1 = !(s1 && !m1.def);
-    const active2 = !(s2 && !m2.def);
+// Speed-chain bonus entering this beat, for a given player/move -- from SETUP_TABLE chains.
+function speedBonusFor(player, moveId){
+  const s = state.setup[player];
+  if(!s) return 0;
+  const hand = handOf(moveId, state.stance[player]);
+  if(hand && hand === s.matchHand) return s.level;
+  return 0;
+}
 
-    let dmg1to2=0, dmg2to1=0, clean1=false, clean2=false, note1='', note2='';
-    let evadedBy1=false, evadedBy2=false, graze1=false, graze2=false;
-
-    if(s1 && !m1.def) note1='P1 stunned, flinches!';
-    if(s2 && !m2.def) note2='P2 stunned, flinches!';
-
-    if(m1.def && m2.def){
-      note1 = note1 || (m1.name+' — no contact');
-      note2 = note2 || (m2.name+' — no contact');
-    } else if(m1.def && !m2.def){
-      if(active2){
-        const r = resolveAtkVsDef(m2, m1id);
-        clean2 = r.clean; graze2 = !!r.graze;
-        if(r.clean){ const f=finalizeClean(2,m2id,r.dmg); dmg2to1=f.dmg; note2=r.text+f.bonusTxt; }
-        else { dmg2to1=r.dmg; note2=r.text; }
-        if(r.evaded) evadedBy1=true;
-      } else { note2 = note2; }
-      note1 = note1 || (dmg2to1===0? m1.name+' works!' : m1.name+' partly holds');
-    } else if(m2.def && !m1.def){
-      if(active1){
-        const r = resolveAtkVsDef(m1, m2id);
-        clean1 = r.clean; graze1 = !!r.graze;
-        if(r.clean){ const f=finalizeClean(1,m1id,r.dmg); dmg1to2=f.dmg; note1=r.text+f.bonusTxt; }
-        else { dmg1to2=r.dmg; note1=r.text; }
-        if(r.evaded) evadedBy2=true;
-      }
-      note2 = note2 || (dmg1to2===0? m2.name+' works!' : m2.name+' partly holds');
-    } else {
-      // both attack
-      const jabTrade = (m1id==='jab' && JAB_IMMUNE.has(m2id)) || (m2id==='jab' && JAB_IMMUNE.has(m1id));
-      if(!active1 && !active2){ /* nothing */ }
-      else if(active1 && !active2){ const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true; note1=m1.name+' lands clean!'+f.bonusTxt; }
-      else if(!active1 && active2){ const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true; note2=m2.name+' lands clean!'+f.bonusTxt; }
-      else if(jabTrade){
-        const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
-        dmg1to2=f1.dmg; dmg2to1=f2.dmg; clean1=true; clean2=true;
-        note1=m1.name+" can't stop the momentum — both land!"+f1.bonusTxt;
-        note2=m2.name+" muscles through — both land!"+f2.bonusTxt;
-      } else if(pri1 && !pri2){
-        const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true;
-        note1=m1.name+' lands first — timing priority!'+f.bonusTxt; note2=m2.name+' beaten to the punch, misses';
-      } else if(pri2 && !pri1){
-        const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true;
-        note2=m2.name+' lands first — timing priority!'+f.bonusTxt; note1=m1.name+' beaten to the punch, misses';
-      } else if(m1.spd < m2.spd){
-        const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true;
-        note1=m1.name+' lands first!'+f.bonusTxt; note2=m2.name+' interrupted, misses';
-      } else if(m2.spd < m1.spd){
-        const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true;
-        note2=m2.name+' lands first!'+f.bonusTxt; note1=m1.name+' interrupted, misses';
-      } else {
-        const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
-        dmg1to2=f1.dmg; dmg2to1=f2.dmg; clean1=true; clean2=true;
-        note1=m1.name+' trades!'+f1.bonusTxt; note2=m2.name+' trades!'+f2.bonusTxt;
-      }
-    }
-
-    // --- streak updates ---
-    if(!m1.def){
-      if(dmg1to2===0) state.streak[1]=0;
-      else if(clean1 && m1id!=='jab') state.streak[1]+=1;
-    }
-    if(!m2.def){
-      if(dmg2to1===0) state.streak[2]=0;
-      else if(clean2 && m2id!=='jab') state.streak[2]+=1;
-    }
-    // A graze (a hook that only just catches a correct sway, 1 dmg) doesn't break the defender's streak.
-    if(dmg2to1>0 && m2id!=='jab' && !graze2) state.streak[1]=0;
-    if(dmg1to2>0 && m1id!=='jab' && !graze1) state.streak[2]=0;
-
-    // --- stun for next beat ---
-    // Triggers on any single hit of 6+, OR 9+ cumulative damage dealt within this conflict,
-    // and continues (re-triggers) if a player who's already stunned gets hit again.
-    state.conflictDealt[1] += dmg1to2;
-    state.conflictDealt[2] += dmg2to1;
-    const newStun = {1:false,2:false};
-    if(s1 && dmg2to1>0) newStun[1]=true;
-    if(s2 && dmg1to2>0) newStun[2]=true;
-    if(dmg1to2>=6 || state.conflictDealt[1]>=9) newStun[2]=true;
-    if(dmg2to1>=6 || state.conflictDealt[2]>=9) newStun[1]=true;
-    state.stunFlag = newStun;
-
-    // --- priority for next beat ---
-    const newPri = {1:false,2:false};
-    if(evadedBy1) newPri[1]=true;
-    if(evadedBy2) newPri[2]=true;
-    state.priority = newPri;
-
-    // --- stats ---
-    if(!m1.def){ if(dmg1to2>0){ state.matchStats[1].landed++; state.roundStats[1].landed++; state.matchStats[1].dmg+=dmg1to2; state.roundStats[1].dmg+=dmg1to2; } else { state.matchStats[1].missed++; state.roundStats[1].missed++; } }
-    if(!m2.def){ if(dmg2to1>0){ state.matchStats[2].landed++; state.roundStats[2].landed++; state.matchStats[2].dmg+=dmg2to1; state.roundStats[2].dmg+=dmg2to1; } else { state.matchStats[2].missed++; state.roundStats[2].missed++; } }
-    if((m1id==='swayl'||m1id==='swayr') && !m2.def && dmg2to1===0){ state.matchStats[1].avoided++; state.roundStats[1].avoided++; }
-    if((m2id==='swayl'||m2id==='swayr') && !m1.def && dmg1to2===0){ state.matchStats[2].avoided++; state.roundStats[2].avoided++; }
-
-    events.push({m1id,m2id,dmg1to2,dmg2to1,note1,note2,
-      pose1:poseFor(m1id), pose2:poseFor(m2id)});
+// After a beat resolves, updates the complementary-combo chain for one player.
+// Punches build it by ALTERNATING hands (left sets up right, right sets up left).
+// A successful sway builds it for a strike from the SAME side. Overhand is a
+// finisher -- it can receive the bonus but never hands one off, win or lose.
+// dealt = damage they dealt this beat, taken = damage they took this beat, usedBonus = the
+// speed bonus that was actually applied to their move this beat (0 if none).
+function updateComboChain(player, moveId, isDef, dealt, taken, usedBonus){
+  if(moveId==='guard'){ state.setup[player] = null; return; } // guarding always breaks it
+  if(taken>0){ state.setup[player] = null; return; } // getting hit breaks it
+  if(moveId==='loverhand' || moveId==='roverhand'){ state.setup[player] = null; return; } // finisher, never chains onward
+  if(isDef && dealt===0 && taken===0 && (moveId==='swayl'||moveId==='swayr')){
+    const side = moveId==='swayl' ? 'left' : 'right';
+    state.setup[player] = {matchHand: side, level: Math.min(usedBonus+1, COMBO_CAP)};
+    return;
   }
-  return events;
+  if(dealt>0){
+    const hand = handOf(moveId, state.stance[player]);
+    if(hand){
+      const opposite = hand==='left' ? 'right' : 'left';
+      state.setup[player] = {matchHand: opposite, level: Math.min(usedBonus+1, COMBO_CAP)};
+    } else {
+      state.setup[player] = null;
+    }
+  }
+  // else: no contact either way (idle/defended-nothing beat) -- leave chain dormant, unchanged.
+}
+
+// Resolves ONE beat (called lazily from nextStep, not precomputed, so a
+// mid-conflict knockdown can cleanly stop before beats that never happened).
+function computeSingleBeat(i){
+  const m1id = state.picks[1][i], m2id = state.picks[2][i];
+  const m1 = MOVES[m1id], m2 = MOVES[m2id];
+  const s1 = state.stunFlag[1], s2 = state.stunFlag[2];
+  const pri1 = state.priority[1], pri2 = state.priority[2];
+  const bonus1 = speedBonusFor(1, m1id), bonus2 = speedBonusFor(2, m2id);
+  const active1 = !(s1 && !m1.def);
+  const active2 = !(s2 && !m2.def);
+
+  let dmg1to2=0, dmg2to1=0, clean1=false, clean2=false, note1='', note2='';
+  let evadedBy1=false, evadedBy2=false, graze1=false, graze2=false;
+
+  if(s1 && !m1.def) note1='P1 stunned, flinches!';
+  if(s2 && !m2.def) note2='P2 stunned, flinches!';
+
+  if(m1.def && m2.def){
+    note1 = note1 || (m1.name+' — no contact');
+    note2 = note2 || (m2.name+' — no contact');
+  } else if(m1.def && !m2.def){
+    if(active2){
+      const r = resolveAtkVsDef(m2, m1id);
+      clean2 = r.clean; graze2 = !!r.graze;
+      if(r.clean){ const f=finalizeClean(2,m2id,r.dmg); dmg2to1=f.dmg; note2=r.text+f.bonusTxt; }
+      else { dmg2to1=r.dmg; note2=r.text; }
+      if(r.evaded) evadedBy1=true;
+    }
+    note1 = note1 || (dmg2to1===0? m1.name+' works!' : m1.name+' partly holds');
+  } else if(m2.def && !m1.def){
+    if(active1){
+      const r = resolveAtkVsDef(m1, m2id);
+      clean1 = r.clean; graze1 = !!r.graze;
+      if(r.clean){ const f=finalizeClean(1,m1id,r.dmg); dmg1to2=f.dmg; note1=r.text+f.bonusTxt; }
+      else { dmg1to2=r.dmg; note1=r.text; }
+      if(r.evaded) evadedBy2=true;
+    }
+    note2 = note2 || (dmg1to2===0? m2.name+' works!' : m2.name+' partly holds');
+  } else {
+    // both attack
+    const jabTrade = (m1id==='jab' && JAB_IMMUNE.has(m2id)) || (m2id==='jab' && JAB_IMMUNE.has(m1id));
+    const effSpd1 = m1.spd - bonus1, effSpd2 = m2.spd - bonus2;
+    if(!active1 && !active2){ /* nothing */ }
+    else if(active1 && !active2){ const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true; note1=m1.name+' lands clean!'+f.bonusTxt; }
+    else if(!active1 && active2){ const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true; note2=m2.name+' lands clean!'+f.bonusTxt; }
+    else if(jabTrade){
+      const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
+      dmg1to2=f1.dmg; dmg2to1=f2.dmg; clean1=true; clean2=true;
+      note1=m1.name+" can't stop the momentum — both land!"+f1.bonusTxt;
+      note2=m2.name+" muscles through — both land!"+f2.bonusTxt;
+    } else if(pri1 && !pri2){
+      const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true;
+      note1=m1.name+' lands first — timing priority!'+f.bonusTxt; note2=m2.name+' beaten to the punch, misses';
+    } else if(pri2 && !pri1){
+      const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true;
+      note2=m2.name+' lands first — timing priority!'+f.bonusTxt; note1=m1.name+' beaten to the punch, misses';
+    } else if(effSpd1 < effSpd2){
+      const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true;
+      note1=m1.name+' lands first!'+(bonus1>0?' (speed boosted)':'')+f.bonusTxt; note2=m2.name+' interrupted, misses';
+    } else if(effSpd2 < effSpd1){
+      const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true;
+      note2=m2.name+' lands first!'+(bonus2>0?' (speed boosted)':'')+f.bonusTxt; note1=m1.name+' interrupted, misses';
+    } else {
+      const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
+      dmg1to2=f1.dmg; dmg2to1=f2.dmg; clean1=true; clean2=true;
+      note1=m1.name+' trades!'+f1.bonusTxt; note2=m2.name+' trades!'+f2.bonusTxt;
+    }
+  }
+
+  // Power-boost damage applies to ANY landed strike (clean win, guard-pierce, catching a
+  // mismatched sway, or a collision) -- universally, not just special cases.
+  if(dmg1to2>0 && bonus1>0){ dmg1to2 += bonus1; note1 += ' (+'+bonus1+' power)'; }
+  if(dmg2to1>0 && bonus2>0){ dmg2to1 += bonus2; note2 += ' (+'+bonus2+' power)'; }
+
+  // --- damage-combo streak updates (separate from the speed-chain bonus) ---
+  if(!m1.def){
+    if(dmg1to2===0) state.streak[1]=0;
+    else if(clean1 && m1id!=='jab') state.streak[1]+=1;
+  }
+  if(!m2.def){
+    if(dmg2to1===0) state.streak[2]=0;
+    else if(clean2 && m2id!=='jab') state.streak[2]+=1;
+  }
+  if(dmg2to1>0 && m2id!=='jab' && !graze2) state.streak[1]=0;
+  if(dmg1to2>0 && m1id!=='jab' && !graze1) state.streak[2]=0;
+
+  // --- speed-chain combo updates (guarding or getting hit breaks it; landing/evading builds it) ---
+  updateComboChain(1, m1id, m1.def, dmg1to2, dmg2to1, bonus1);
+  updateComboChain(2, m2id, m2.def, dmg2to1, dmg1to2, bonus2);
+
+  // --- stun for next beat ---
+  state.conflictDealt[1] += dmg1to2;
+  state.conflictDealt[2] += dmg2to1;
+  const newStun = {1:false,2:false};
+  if(s1 && dmg2to1>0) newStun[1]=true;
+  if(s2 && dmg1to2>0) newStun[2]=true;
+  if(dmg1to2>=6 || state.conflictDealt[1]>=9) newStun[2]=true;
+  if(dmg2to1>=6 || state.conflictDealt[2]>=9) newStun[1]=true;
+  state.stunFlag = newStun;
+
+  // --- priority for next beat ---
+  const newPri = {1:false,2:false};
+  if(evadedBy1) newPri[1]=true;
+  if(evadedBy2) newPri[2]=true;
+  state.priority = newPri;
+
+  // --- stats ---
+  if(!m1.def){ if(dmg1to2>0){ state.matchStats[1].landed++; state.roundStats[1].landed++; state.matchStats[1].dmg+=dmg1to2; state.roundStats[1].dmg+=dmg1to2; } else { state.matchStats[1].missed++; state.roundStats[1].missed++; } }
+  if(!m2.def){ if(dmg2to1>0){ state.matchStats[2].landed++; state.roundStats[2].landed++; state.matchStats[2].dmg+=dmg2to1; state.roundStats[2].dmg+=dmg2to1; } else { state.matchStats[2].missed++; state.roundStats[2].missed++; } }
+  if((m1id==='swayl'||m1id==='swayr') && !m2.def && dmg2to1===0){ state.matchStats[1].avoided++; state.roundStats[1].avoided++; }
+  if((m2id==='swayl'||m2id==='swayr') && !m1.def && dmg1to2===0){ state.matchStats[2].avoided++; state.roundStats[2].avoided++; }
+
+  return {m1id,m2id,dmg1to2,dmg2to1,note1,note2,
+    pose1:poseFor(m1id), pose2:poseFor(m2id)};
 }
 
 function resolveAtkVsDef(atk, defId){
   if(defId==='guard'){
-    if(atk.weight==='heavy') return {dmg:atk.chipDmg!==undefined?atk.chipDmg:1, clean:false, text:atk.name+' chips through guard for '+(atk.chipDmg!==undefined?atk.chipDmg:1)+'!'};
+    if(atk.weight==='heavy') return {dmg:atk.chipDmg!==undefined?atk.chipDmg:1, clean:false, pierce:true, text:atk.name+' chips through guard for '+(atk.chipDmg!==undefined?atk.chipDmg:1)+'!'};
     return {dmg:0, clean:false, text:atk.name+' blocked by guard'};
   }
   // sway
@@ -681,23 +776,31 @@ function resolveAtkVsDef(atk, defId){
 
 /* ---------- STEPPING THROUGH BEATS ---------- */
 function nextStep(){
-  const ev = state.beatEvents[state.beatIndex];
-  drawFig('fig1','var(--red)', ev.pose1, ev.dmg2to1>0?'lose':(ev.dmg1to2>0?'win':''));
-  drawFig('fig2','var(--blue)', ev.pose2, ev.dmg1to2>0?'lose':(ev.dmg2to1>0?'win':''));
+  const ev = computeSingleBeat(state.beatIndex);
+  state.currentConflictBeats.push(ev);
+  const p1Dealt = ev.dmg1to2>0, p1Hit = ev.dmg2to1>0;
+  const p2Dealt = ev.dmg2to1>0, p2Hit = ev.dmg1to2>0;
+  drawFig('fig1','var(--red)', ev.pose1, p1Dealt, p1Hit, true);
+  drawFig('fig2','var(--blue)', ev.pose2, p2Dealt, p2Hit, false);
   state.hp[1] = Math.max(0, state.hp[1]-ev.dmg2to1);
   state.hp[2] = Math.max(0, state.hp[2]-ev.dmg1to2);
   updateHpUI();
   const log = document.getElementById('beatlogs');
   const d = document.createElement('div');
   d.className='beatlog';
-  d.innerHTML = '<b>Beat '+(state.beatIndex+1)+':</b> '+MOVES[ev.m1id].name+' vs '+MOVES[ev.m2id].name+'<br>'+
-    '<span style="color:var(--red)">'+ev.note1+'</span> &nbsp; <span style="color:var(--blue)">'+ev.note2+'</span>';
+  d.innerHTML = '<div class="beatnum">Beat '+(state.beatIndex+1)+'</div>'+
+    '<div class="beatmoves"><b style="color:var(--red)">'+MOVES[ev.m1id].name+'</b><b style="color:var(--blue)">'+MOVES[ev.m2id].name+'</b></div>'+
+    '<div class="beatoutcome">'+
+      '<div style="color:var(--red)">'+ev.note1+'</div>'+
+      '<div style="color:var(--blue)">'+ev.note2+'</div>'+
+    '</div>';
   log.appendChild(d);
 
-  if(state.hp[1]<=0 || state.hp[2]<=0){
-    document.getElementById('next-btn').style.display='none';
-    logConflict();
-    setTimeout(()=>endMatch(state.hp[1]<=0 && state.hp[2]<=0 ? 0 : (state.hp[1]<=0?2:1), true, false),600);
+  const kd = handleKnockdowns();
+  if(kd.ended) return;
+  if(kd.skip){
+    document.getElementById('next-btn').textContent='Continue (Knockdown!)';
+    document.getElementById('next-btn').onclick = afterConflict;
     return;
   }
   state.beatIndex++;
@@ -709,18 +812,51 @@ function nextStep(){
   }
 }
 
+function koChanceFor(n){
+  if(n<=1) return 0.20;
+  if(n===2) return 0.45;
+  if(n===3) return 0.75;
+  return 1.0;
+}
+
+// Checks for 0-HP knockdowns after a beat's damage has been applied.
+// Returns {ended:true} if the match just ended in a knockout (endMatch already called),
+// or {skip:true} if a knockdown occurred but the fight continues (conflict cut short).
+function handleKnockdowns(){
+  const kd1 = state.hp[1]<=0, kd2 = state.hp[2]<=0;
+  if(!kd1 && !kd2) return {ended:false, skip:false};
+  let ko1=false, ko2=false;
+  if(kd1){ state.knockdownCount[1]++; ko1 = Math.random() < koChanceFor(state.knockdownCount[1]); }
+  if(kd2){ state.knockdownCount[2]++; ko2 = Math.random() < koChanceFor(state.knockdownCount[2]); }
+  document.getElementById('next-btn').style.display='none';
+  logConflict();
+  if(ko1 && ko2){ setTimeout(()=>endMatch(0, true, false), 600); return {ended:true}; }
+  if(ko1){ setTimeout(()=>endMatch(2, true, false), 600); return {ended:true}; }
+  if(ko2){ setTimeout(()=>endMatch(1, true, false), 600); return {ended:true}; }
+  // Knocked down but survives -- recovers to 2 HP, wins this round automatically
+  // (unless the opponent also went down this round -- see showRoundSummary).
+  if(kd1){ state.hp[1]=2; state.knockdownFlagRound[1]=true; }
+  if(kd2){ state.hp[2]=2; state.knockdownFlagRound[2]=true; }
+  updateHpUI();
+  document.getElementById('next-btn').style.display='block';
+  return {ended:false, skip:true};
+}
+
 function logConflict(){
   state.roundLog.push({
     conflict: state.conflict,
     p1moves: state.picks[1].map(id=>MOVES[id].name),
     p2moves: state.picks[2].map(id=>MOVES[id].name),
-    beats: state.beatEvents,
+    beats: state.currentConflictBeats,
     hp1: state.hp[1], hp2: state.hp[2]
   });
 }
 
 function afterConflict(){
-  logConflict();
+  // logConflict() may already have run once (from a knockdown this beat) -- avoid double logging.
+  if(!state.roundLog.length || state.roundLog[state.roundLog.length-1].conflict!==state.conflict){
+    logConflict();
+  }
   if(state.aiEnabled){ state.picks[1].forEach(id=>{ state.aiMemory[id]++; }); }
   state.conflict++;
   if(state.conflict>3){ showRoundSummary(); return; }
@@ -728,15 +864,24 @@ function afterConflict(){
 }
 
 function showRoundSummary(){
-  const winner = roundWinner(state.roundStats[1], state.roundStats[2]);
+  let winner;
+  const kd1 = state.knockdownFlagRound[1], kd2 = state.knockdownFlagRound[2];
+  let kdNote = '';
+  if(kd1 && !kd2){ winner=2; kdNote = '<b>Knockdown — Player 2 wins the round</b><br>'; }
+  else if(kd2 && !kd1){ winner=1; kdNote = '<b>Knockdown — Player 1 wins the round</b><br>'; }
+  else {
+    winner = roundWinner(state.roundStats[1], state.roundStats[2]);
+    if(kd1 && kd2) kdNote = '<b>Both fighters were knocked down — scored normally</b><br>';
+  }
   if(winner===0) state.roundDraws++; else state.roundWins[winner]++;
+  state.roundResults.push({round: state.round, winner});
 
   document.getElementById('rs-title').textContent = 'Round '+state.round+' Summary';
   document.getElementById('rs-p1hp').style.width = (state.hp[1]/state.maxHp*100)+'%';
   document.getElementById('rs-p2hp').style.width = (state.hp[2]/state.maxHp*100)+'%';
   const winTxt = winner===0 ? '<b>Round drawn — no points awarded</b>' :
     '<b style="color:'+(winner===1?'var(--red)':'var(--blue)')+'">Player '+winner+' wins this round</b>';
-  document.getElementById('rs-stats').innerHTML = winTxt+'<br>'+
+  document.getElementById('rs-stats').innerHTML = kdNote+winTxt+'<br>'+
     '<b style="color:var(--red)">P1</b> '+state.roundStats[1].dmg+' dmg, '+state.roundStats[1].landed+' landed / '+state.roundStats[1].missed+' missed<br>'+
     '<b style="color:var(--blue)">P2</b> '+state.roundStats[2].dmg+' dmg, '+state.roundStats[2].landed+' landed / '+state.roundStats[2].missed+' missed<br>'+
     '<span class="muted">Rounds won — P1: '+state.roundWins[1]+' &nbsp; P2: '+state.roundWins[2]+'</span>';
@@ -771,6 +916,7 @@ function afterRoundSummary(){
   };
   state.roundLog=[];
   state.roundStats={1:{dmg:0,landed:0,missed:0,avoided:0}, 2:{dmg:0,landed:0,missed:0,avoided:0}};
+  resetRoundScopedState();
   if(state.round>=3){
     endMatch(decideWinner(), false, false);
     return;
@@ -832,24 +978,33 @@ function decideWinner(){
 
 function endMatch(winner, ko, surrendered){
   const body = document.getElementById('end-body');
-  let title = winner===0 ? "It's a Draw!" : 'Player '+winner+' Wins!';
+  let title;
+  if(surrendered) title = 'No Contest';
+  else if(winner===0) title = "It's a Draw!";
+  else title = 'Player '+winner+' Wins!'+(ko?' (Knockout)':'');
   document.getElementById('end-title').textContent = title;
-  document.getElementById('end-title').style.color = winner===1?'var(--red)':winner===2?'var(--blue)':'var(--text)';
-  body.innerHTML = (ko? '<p><b>KNOCKOUT!</b></p>':'') + (surrendered? '<p><b>Opponent surrendered.</b></p>':'') +
-    '<p><b>Rounds won</b> — P1: '+state.roundWins[1]+' &nbsp; P2: '+state.roundWins[2]+(state.roundDraws?' &nbsp; Draws: '+state.roundDraws:'')+'</p>'+
-    '<p>Final HP — P1: '+state.hp[1]+' &nbsp; P2: '+state.hp[2]+'</p>'+
-    '<p class="muted">Total damage — P1: '+state.matchStats[1].dmg+' ('+state.matchStats[1].landed+' landed / '+state.matchStats[1].missed+' missed)<br>'+
-    'P2: '+state.matchStats[2].dmg+' ('+state.matchStats[2].landed+' landed / '+state.matchStats[2].missed+' missed)</p>';
+  document.getElementById('end-title').style.color = surrendered ? 'var(--text)' : (winner===1?'var(--red)':winner===2?'var(--blue)':'var(--text)');
 
-  const sc = document.getElementById('end-scroll');
-  if(state.matchLog.length){
-    let rows = state.matchLog.map(r=>{
-      const w = r.winner===0?'Draw':('P'+r.winner);
-      return '<tr><td>'+r.round+'</td><td>'+w+'</td><td>'+r.hp1+'</td><td>'+r.hp2+'</td><td>'+r.stats1.dmg+'</td><td>'+r.stats2.dmg+'</td></tr>';
-    }).join('');
-    sc.innerHTML = '<b class="center" style="display:block">Round-by-round</b>'+
-      '<table class="sumtable"><tr><th>Rd</th><th>Won</th><th>P1 HP</th><th>P2 HP</th><th>P1 Dmg</th><th>P2 Dmg</th></tr>'+rows+'</table>';
-  } else { sc.innerHTML=''; }
+  let roundsHtml = state.roundResults.map(r=>{
+    const color = r.winner===1?'var(--red)':r.winner===2?'var(--blue)':'var(--text)';
+    return '<div class="roundline" style="color:'+color+'">ROUND '+r.round+'</div>';
+  }).join('');
+
+  const s1 = state.matchStats[1], s2 = state.matchStats[2];
+  const statsHtml =
+    '<div class="twocol">'+
+      '<div class="col"><b style="color:var(--red)">Player 1</b>'+
+        'HP: '+state.hp[1]+'<br>Damage: '+s1.dmg+'<br>Landed: '+s1.landed+'<br>Missed: '+s1.missed+'<br>'+
+        'Guarded/swayed: '+s1.avoided+'<br>Knockdowns: '+state.knockdownCount[1]+
+      '</div>'+
+      '<div class="col"><b style="color:var(--blue)">Player 2</b>'+
+        'HP: '+state.hp[2]+'<br>Damage: '+s2.dmg+'<br>Landed: '+s2.landed+'<br>Missed: '+s2.missed+'<br>'+
+        'Guarded/swayed: '+s2.avoided+'<br>Knockdowns: '+state.knockdownCount[2]+
+      '</div>'+
+    '</div>';
+
+  body.innerHTML = roundsHtml + statsHtml;
+  document.getElementById('end-scroll').innerHTML = '';
   show('scr-end');
 }
 </script>
