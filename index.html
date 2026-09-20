@@ -111,30 +111,29 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
     sway, either way. A successful sway also gives you <b>timing
     priority</b> on your very next move, letting it land first regardless
     of speed.
-    <h3>Damage Combo</h3>
+    <h3>Power Chain</h3>
     Landing clean hits builds a damage bonus (up to +3) added to your
     damage. Getting hit by anything other than a jab resets it, and it
     resets fully at the start of every round. Jab itself never builds or
     breaks it — it can't carry a fight on its own.
-    <h3>Power Chain &amp; Speed Chain</h3>
-    A landed punch sets up a bonus for your very next strike if it comes
-    from the <b>opposite hand</b> (Jab/Straight lead into a Cross, and back
-    — this flips in southpaw). A successful sway sets up a bonus for a
-    strike from the <b>same side</b> you swayed. Each link raises the bonus
-    by 1, capped at +3. <b>Speed Chain</b> reduces your move's effective
-    speed by that amount in a clash. <b>Power Chain</b> adds the same
-    amount as flat bonus damage to anything you land — clean, through
-    guard, even a graze. Choosing Guard wipes it out; taking non-jab
-    damage wipes it out; a trade lands the bonus but ends the chain right
-    after. Punching through guard keeps it alive. Throwing an Overhand
-    always ends the chain, whether it lands or not — it's a finisher, not
-    a link. Resets fully at the start of every round.
+    <h3>Speed Chain</h3>
+    A landed punch sets up a speed bonus for your very next strike if it
+    comes from the <b>opposite hand</b> (Jab/Straight lead into a Cross,
+    and back — this flips in southpaw). A successful sway sets up the same
+    bonus for a strike from the <b>same side</b> you swayed. Each link
+    raises it by 1, capped at +3, and it reduces your move's effective
+    speed by that amount in a clash — it does <b>not</b> add damage, only
+    speed. Choosing Guard wipes it out; taking non-jab damage wipes it
+    out; a trade uses it but ends the chain right after. Punching through
+    guard keeps it alive. Throwing an Overhand always ends the chain,
+    whether it lands or not — it's a finisher, not a link. Resets fully
+    at the start of every round.
     <h3>Special: Jab vs Hooks/Body Shots</h3>
     A jab can't stop a hook or body shot's momentum — if a jab meets one of
     these, both punches land.
     <h3>Stun</h3>
-    Any single beat that deals 6+ damage stuns the opponent's next beat, and
-    so does dealing 9+ total damage within one conflict. A stunned player
+    Any single beat that deals 7+ damage stuns the opponent's next beat, and
+    so does dealing 10+ total damage within one conflict. A stunned player
     can still Guard or Sway normally — those still work fine — but any
     attack they'd picked just fails to come out.
     <h3>Health & Rounds</h3>
@@ -592,12 +591,12 @@ function comboBonus(player){ return Math.min(state.streak[player], COMBO_CAP); }
 
 function finalizeClean(player, moveId, baseDmg){
   let dmg = baseDmg;
-  let bonusTxt = '';
+  let power = 0;
   if(moveId!=='jab'){
-    const b = comboBonus(player);
-    if(b>0){ dmg += b; bonusTxt = ' (+'+b+' combo)'; }
+    power = comboBonus(player);
+    dmg += power;
   }
-  return {dmg, bonusTxt};
+  return {dmg, power};
 }
 
 // Speed-chain bonus entering this beat, for a given player/move -- from SETUP_TABLE chains.
@@ -648,10 +647,11 @@ function computeSingleBeat(i){
   const active2 = !(s2 && !m2.def);
 
   let dmg1to2=0, dmg2to1=0, clean1=false, clean2=false, note1='', note2='';
+  let power1=0, power2=0;
   let evadedBy1=false, evadedBy2=false, graze1=false, graze2=false;
 
-  if(s1 && !m1.def) note1='P1 stunned, flinches!';
-  if(s2 && !m2.def) note2='P2 stunned, flinches!';
+  if(s1 && !m1.def) note1=m1.name+' flinches (stunned)! Guard or Sway next.';
+  if(s2 && !m2.def) note2=m2.name+' flinches (stunned)! Guard or Sway next.';
 
   if(m1.def && m2.def){
     note1 = note1 || (m1.name+' — no contact');
@@ -660,7 +660,7 @@ function computeSingleBeat(i){
     if(active2){
       const r = resolveAtkVsDef(m2, m1id);
       clean2 = r.clean; graze2 = !!r.graze;
-      if(r.clean){ const f=finalizeClean(2,m2id,r.dmg); dmg2to1=f.dmg; note2=r.text+f.bonusTxt; }
+      if(r.clean){ const f=finalizeClean(2,m2id,r.dmg); dmg2to1=f.dmg; power2=f.power; note2=r.text; }
       else { dmg2to1=r.dmg; note2=r.text; }
       if(r.evaded) evadedBy1=true;
     }
@@ -669,7 +669,7 @@ function computeSingleBeat(i){
     if(active1){
       const r = resolveAtkVsDef(m1, m2id);
       clean1 = r.clean; graze1 = !!r.graze;
-      if(r.clean){ const f=finalizeClean(1,m1id,r.dmg); dmg1to2=f.dmg; note1=r.text+f.bonusTxt; }
+      if(r.clean){ const f=finalizeClean(1,m1id,r.dmg); dmg1to2=f.dmg; power1=f.power; note1=r.text; }
       else { dmg1to2=r.dmg; note1=r.text; }
       if(r.evaded) evadedBy2=true;
     }
@@ -679,38 +679,45 @@ function computeSingleBeat(i){
     const jabTrade = (m1id==='jab' && JAB_IMMUNE.has(m2id)) || (m2id==='jab' && JAB_IMMUNE.has(m1id));
     const effSpd1 = m1.spd - bonus1, effSpd2 = m2.spd - bonus2;
     if(!active1 && !active2){ /* nothing */ }
-    else if(active1 && !active2){ const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true; note1=m1.name+' lands clean!'+f.bonusTxt; }
-    else if(!active1 && active2){ const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true; note2=m2.name+' lands clean!'+f.bonusTxt; }
+    else if(active1 && !active2){ const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; power1=f.power; clean1=true; note1=m1.name+' lands clean!'; }
+    else if(!active1 && active2){ const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; power2=f.power; clean2=true; note2=m2.name+' lands clean!'; }
     else if(jabTrade){
       const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
-      dmg1to2=f1.dmg; dmg2to1=f2.dmg; clean1=true; clean2=true;
-      note1=m1.name+" can't stop the momentum — both land!"+f1.bonusTxt;
-      note2=m2.name+" muscles through — both land!"+f2.bonusTxt;
+      dmg1to2=f1.dmg; dmg2to1=f2.dmg; power1=f1.power; power2=f2.power; clean1=true; clean2=true;
+      note1=m1.name+" can't stop the momentum — both land!";
+      note2=m2.name+" muscles through — both land!";
     } else if(pri1 && !pri2){
-      const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true;
-      note1=m1.name+' lands first — timing priority!'+f.bonusTxt; note2=m2.name+' beaten to the punch, misses';
+      const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; power1=f.power; clean1=true;
+      note1=m1.name+' lands first — timing priority!'; note2=m2.name+' beaten to the punch, misses';
     } else if(pri2 && !pri1){
-      const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true;
-      note2=m2.name+' lands first — timing priority!'+f.bonusTxt; note1=m1.name+' beaten to the punch, misses';
+      const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; power2=f.power; clean2=true;
+      note2=m2.name+' lands first — timing priority!'; note1=m1.name+' beaten to the punch, misses';
     } else if(effSpd1 < effSpd2){
-      const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; clean1=true;
-      note1=m1.name+' lands first!'+(bonus1>0?' (speed boosted)':'')+f.bonusTxt; note2=m2.name+' interrupted, misses';
+      const f=finalizeClean(1,m1id,m1.dmg); dmg1to2=f.dmg; power1=f.power; clean1=true;
+      note1=m1.name+' lands first!'; note2=m2.name+' interrupted, misses';
     } else if(effSpd2 < effSpd1){
-      const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; clean2=true;
-      note2=m2.name+' lands first!'+(bonus2>0?' (speed boosted)':'')+f.bonusTxt; note1=m1.name+' interrupted, misses';
+      const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; power2=f.power; clean2=true;
+      note2=m2.name+' lands first!'; note1=m1.name+' interrupted, misses';
     } else {
       const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
-      dmg1to2=f1.dmg; dmg2to1=f2.dmg; clean1=true; clean2=true;
-      note1=m1.name+' trades!'+f1.bonusTxt; note2=m2.name+' trades!'+f2.bonusTxt;
+      dmg1to2=f1.dmg; dmg2to1=f2.dmg; power1=f1.power; power2=f2.power; clean1=true; clean2=true;
+      note1=m1.name+' trades!'; note2=m2.name+' trades!';
     }
   }
 
-  // Power-boost damage applies to ANY landed strike (clean win, guard-pierce, catching a
-  // mismatched sway, or a collision) -- universally, not just special cases.
-  if(dmg1to2>0 && bonus1>0){ dmg1to2 += bonus1; note1 += ' (+'+bonus1+' power)'; }
-  if(dmg2to1>0 && bonus2>0){ dmg2to1 += bonus2; note2 += ' (+'+bonus2+' power)'; }
+  // Uniform, tidy suffixes: Speed Chain (hand-alternation, speed only), Power Chain
+  // (consecutive clean hits, damage only -- these no longer stack into one system),
+  // then the actual damage number relevant to each side.
+  if(bonus1>0) note1 += ' (Speed +'+bonus1+')';
+  if(bonus2>0) note2 += ' (Speed +'+bonus2+')';
+  if(power1>0) note1 += ' (Power +'+power1+')';
+  if(power2>0) note2 += ' (Power +'+power2+')';
+  const relevantDmg1 = m1.def ? dmg2to1 : dmg1to2;
+  const relevantDmg2 = m2.def ? dmg1to2 : dmg2to1;
+  if(relevantDmg1>0) note1 += ' — '+relevantDmg1+' dmg';
+  if(relevantDmg2>0) note2 += ' — '+relevantDmg2+' dmg';
 
-  // --- damage-combo streak updates (separate from the speed-chain bonus) ---
+  // --- Power Chain updates (consecutive clean non-jab hits -- was "damage combo") ---
   if(!m1.def){
     if(dmg1to2===0) state.streak[1]=0;
     else if(clean1 && m1id!=='jab') state.streak[1]+=1;
@@ -722,7 +729,7 @@ function computeSingleBeat(i){
   if(dmg2to1>0 && m2id!=='jab' && !graze2) state.streak[1]=0;
   if(dmg1to2>0 && m1id!=='jab' && !graze1) state.streak[2]=0;
 
-  // --- speed-chain combo updates (guarding or getting hit breaks it; landing/evading builds it) ---
+  // --- Speed Chain updates (hand-alternation; speed only, no damage effect) ---
   updateComboChain(1, m1id, m1.def, dmg1to2, dmg2to1, bonus1);
   updateComboChain(2, m2id, m2.def, dmg2to1, dmg1to2, bonus2);
 
@@ -732,8 +739,8 @@ function computeSingleBeat(i){
   const newStun = {1:false,2:false};
   if(s1 && dmg2to1>0) newStun[1]=true;
   if(s2 && dmg1to2>0) newStun[2]=true;
-  if(dmg1to2>=6 || state.conflictDealt[1]>=9) newStun[2]=true;
-  if(dmg2to1>=6 || state.conflictDealt[2]>=9) newStun[1]=true;
+  if(dmg1to2>=7 || state.conflictDealt[1]>=10) newStun[2]=true;
+  if(dmg2to1>=7 || state.conflictDealt[2]>=10) newStun[1]=true;
   state.stunFlag = newStun;
 
   // --- priority for next beat ---
@@ -892,9 +899,11 @@ function showRoundSummary(){
     const div=document.createElement('div');
     div.className='conflictBlock';
     let beatHtml = c.beats.map((b,i)=>
-      '<div style="margin:2px 0"><b>B'+(i+1)+':</b> '+
-      '<span style="color:var(--red)">'+b.note1+'</span> / '+
-      '<span style="color:var(--blue)">'+b.note2+'</span></div>').join('');
+      '<div class="beatlog">'+
+        '<div class="beatnum">Beat '+(i+1)+'</div>'+
+        '<div class="beatmoves"><b style="color:var(--red)">'+MOVES[b.m1id].name+'</b><b style="color:var(--blue)">'+MOVES[b.m2id].name+'</b></div>'+
+        '<div class="beatoutcome"><div style="color:var(--red)">'+b.note1+'</div><div style="color:var(--blue)">'+b.note2+'</div></div>'+
+      '</div>').join('');
     div.innerHTML = '<b>Conflict '+c.conflict+'</b><br>'+
       '<span class="muted">P1: '+c.p1moves.join(', ')+'<br>P2: '+c.p2moves.join(', ')+'</span>'+
       beatHtml+
