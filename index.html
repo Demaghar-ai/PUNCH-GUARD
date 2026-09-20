@@ -74,6 +74,9 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
 .twocol .col{background:var(--panel2);border-radius:10px;padding:10px 12px;font-size:.85em;text-align:left;}
 .twocol .col b{display:block;font-size:1em;margin-bottom:4px;}
 .roundline{font-size:1.25em;font-weight:bold;text-align:center;margin:4px 0;letter-spacing:1px;}
+.pvrow{display:flex;justify-content:space-between;font-size:1em;margin:3px 0;}
+.pvrow b{font-weight:bold;}
+.pvhead{display:flex;justify-content:space-between;font-size:1.1em;margin:2px 0 6px;}
 </style>
 </head>
 <body>
@@ -222,7 +225,7 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
 </div>
 
 <div class="screen" id="scr-roundsum">
-  <h1 id="rs-title">Round Summary</h1>
+  <h1 id="rs-title" style="text-transform:uppercase">Round Summary</h1>
   <div class="hpmini">
     <div><div class="small-label" style="color:var(--red)">P1 HP</div>
       <div class="hpbar-wrap"><div class="hpbar" id="rs-p1hp" style="background:var(--red)"></div></div></div>
@@ -248,7 +251,7 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
 <div class="screen" id="scr-end">
   <h1 id="end-title">Result</h1>
   <div class="panel center" id="end-body"></div>
-  <div class="scroll" id="end-scroll"></div>
+  <div class="scroll" id="end-log" style="display:none"></div>
   <button class="btn primary" onclick="location.reload()">Back to Menu</button>
 </div>
 
@@ -287,6 +290,8 @@ const MOVE_ORDER = ['jab','guard','swayl','swayr','straight','cross','lbody','rb
 // Moves whose momentum a jab can't stop -- jab vs these = trade, not interrupt.
 const JAB_IMMUNE = new Set(['lhook','rhook','lbody','rbody']);
 const COMBO_CAP = 3;
+// Same-tier, opposite-hand pairs eligible for the hook/uppercut/body clash rule.
+const CLASH_TIER = {lhook:'hook', rhook:'hook', luppercut:'upper', ruppercut:'upper', lbody:'body', rbody:'body'};
 
 // Which hand throws a move. Jab/Straight/Cross flip with stance; everything else is fixed.
 function handOf(moveId, stance){
@@ -664,7 +669,7 @@ function computeSingleBeat(i){
       else { dmg2to1=r.dmg; note2=r.text; }
       if(r.evaded) evadedBy1=true;
     }
-    note1 = note1 || (dmg2to1===0? m1.name+' works!' : m1.name+' partly holds');
+    note1 = note1 || defenderVerdict(m1id, m1.name, dmg2to1, graze2);
   } else if(m2.def && !m1.def){
     if(active1){
       const r = resolveAtkVsDef(m1, m2id);
@@ -673,7 +678,7 @@ function computeSingleBeat(i){
       else { dmg1to2=r.dmg; note1=r.text; }
       if(r.evaded) evadedBy2=true;
     }
-    note2 = note2 || (dmg1to2===0? m2.name+' works!' : m2.name+' partly holds');
+    note2 = note2 || defenderVerdict(m2id, m2.name, dmg1to2, graze1);
   } else {
     // both attack
     const jabTrade = (m1id==='jab' && JAB_IMMUNE.has(m2id)) || (m2id==='jab' && JAB_IMMUNE.has(m1id));
@@ -698,6 +703,13 @@ function computeSingleBeat(i){
     } else if(effSpd2 < effSpd1){
       const f=finalizeClean(2,m2id,m2.dmg); dmg2to1=f.dmg; power2=f.power; clean2=true;
       note2=m2.name+' lands first!'; note1=m1.name+' interrupted, misses';
+    } else if(CLASH_TIER[m1id] && CLASH_TIER[m1id]===CLASH_TIER[m2id] && handOf(m1id,state.stance[1])!==handOf(m2id,state.stance[2])){
+      // Same tier (hook/hook, uppercut/uppercut, body/body), opposite hands, tied speed --
+      // a genuine clash: both still connect, but for 1 less base damage each. Power Chain
+      // bonus still applies normally on top.
+      const f1=finalizeClean(1,m1id,Math.max(0,m1.dmg-1)), f2=finalizeClean(2,m2id,Math.max(0,m2.dmg-1));
+      dmg1to2=f1.dmg; dmg2to1=f2.dmg; power1=f1.power; power2=f2.power; clean1=true; clean2=true;
+      note1=m1.name+' clashes! (hook or uppercut clash)'; note2=m2.name+' clashes! (hook or uppercut clash)';
     } else {
       const f1=finalizeClean(1,m1id,m1.dmg), f2=finalizeClean(2,m2id,m2.dmg);
       dmg1to2=f1.dmg; dmg2to1=f2.dmg; power1=f1.power; power2=f2.power; clean1=true; clean2=true;
@@ -757,6 +769,27 @@ function computeSingleBeat(i){
 
   return {m1id,m2id,dmg1to2,dmg2to1,note1,note2,
     pose1:poseFor(m1id), pose2:poseFor(m2id)};
+}
+
+// Wording for the defender's own note when they didn't fully block: guard chip damage and a
+// sway graze (correct read, reduced damage) both "partly hold" -- a mismatched sway that gets
+// caught clean (wrong read, full + bonus damage) is a distinct failure, not a partial success.
+function defenderVerdict(moveId, moveName, dmgTaken, graze){
+  if(dmgTaken===0) return moveName+' works!';
+  if(moveId==='guard' || graze) return moveName+' partly holds';
+  return moveName+' sway failed!';
+}
+
+// Shared renderer for a single conflict's beat-by-beat breakdown -- used by both
+// the round summary and the full match summary, so they always match in style.
+function renderConflictHtml(c){
+  const beatHtml = c.beats.map((b,i)=>
+    '<div class="beatlog">'+
+      '<div class="beatnum">Beat '+(i+1)+'</div>'+
+      '<div class="beatmoves"><b style="color:var(--red)">'+MOVES[b.m1id].name+'</b><b style="color:var(--blue)">'+MOVES[b.m2id].name+'</b></div>'+
+      '<div class="beatoutcome"><div style="color:var(--red)">'+b.note1+'</div><div style="color:var(--blue)">'+b.note2+'</div></div>'+
+    '</div>').join('');
+  return '<div class="conflictBlock"><b style="text-transform:uppercase">Conflict '+c.conflict+'</b>'+beatHtml+'</div>';
 }
 
 function resolveAtkVsDef(atk, defId){
@@ -888,28 +921,17 @@ function showRoundSummary(){
   document.getElementById('rs-p2hp').style.width = (state.hp[2]/state.maxHp*100)+'%';
   const winTxt = winner===0 ? '<b>Round drawn — no points awarded</b>' :
     '<b style="color:'+(winner===1?'var(--red)':'var(--blue)')+'">Player '+winner+' wins this round</b>';
-  document.getElementById('rs-stats').innerHTML = kdNote+winTxt+'<br>'+
-    '<b style="color:var(--red)">P1</b> '+state.roundStats[1].dmg+' dmg, '+state.roundStats[1].landed+' landed / '+state.roundStats[1].missed+' missed<br>'+
-    '<b style="color:var(--blue)">P2</b> '+state.roundStats[2].dmg+' dmg, '+state.roundStats[2].landed+' landed / '+state.roundStats[2].missed+' missed<br>'+
-    '<span class="muted">Rounds won — P1: '+state.roundWins[1]+' &nbsp; P2: '+state.roundWins[2]+'</span>';
+  const s1=state.roundStats[1], s2=state.roundStats[2];
+  document.getElementById('rs-stats').innerHTML =
+    (kdNote? '<div class="center">'+kdNote+'</div>' : '') +
+    '<div class="center" style="margin-bottom:6px">'+winTxt+'</div>'+
+    '<div class="pvhead"><b style="color:var(--red)">Player 1</b><b style="color:var(--blue)">Player 2</b></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+s1.dmg+' dmg</span><span style="color:var(--blue)">'+s2.dmg+' dmg</span></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+s1.landed+' landed</span><span style="color:var(--blue)">'+s2.landed+' landed</span></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+s1.missed+' missed</span><span style="color:var(--blue)">'+s2.missed+' missed</span></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+state.roundWins[1]+' rounds won</span><span style="color:var(--blue)">'+state.roundWins[2]+' rounds won</span></div>';
 
-  const body = document.getElementById('rs-body');
-  body.innerHTML='';
-  state.roundLog.forEach(c=>{
-    const div=document.createElement('div');
-    div.className='conflictBlock';
-    let beatHtml = c.beats.map((b,i)=>
-      '<div class="beatlog">'+
-        '<div class="beatnum">Beat '+(i+1)+'</div>'+
-        '<div class="beatmoves"><b style="color:var(--red)">'+MOVES[b.m1id].name+'</b><b style="color:var(--blue)">'+MOVES[b.m2id].name+'</b></div>'+
-        '<div class="beatoutcome"><div style="color:var(--red)">'+b.note1+'</div><div style="color:var(--blue)">'+b.note2+'</div></div>'+
-      '</div>').join('');
-    div.innerHTML = '<b>Conflict '+c.conflict+'</b><br>'+
-      '<span class="muted">P1: '+c.p1moves.join(', ')+'<br>P2: '+c.p2moves.join(', ')+'</span>'+
-      beatHtml+
-      '<div class="muted">HP after: P1 '+c.hp1+' / P2 '+c.hp2+'</div>';
-    body.appendChild(div);
-  });
+  document.getElementById('rs-body').innerHTML = state.roundLog.map(renderConflictHtml).join('');
   state.matchLog.push({round: state.round, hp1: state.hp[1], hp2: state.hp[2], winner: winner,
     stats1:{...state.roundStats[1]}, stats2:{...state.roundStats[2]}, conflicts: state.roundLog});
   document.getElementById('rs-continue').textContent = state.round>=3 ? 'See Match Summary' : 'Continue';
@@ -994,26 +1016,32 @@ function endMatch(winner, ko, surrendered){
   document.getElementById('end-title').textContent = title;
   document.getElementById('end-title').style.color = surrendered ? 'var(--text)' : (winner===1?'var(--red)':winner===2?'var(--blue)':'var(--text)');
 
-  let roundsHtml = state.roundResults.map(r=>{
-    const color = r.winner===1?'var(--red)':r.winner===2?'var(--blue)':'var(--text)';
-    return '<div class="roundline" style="color:'+color+'">ROUND '+r.round+'</div>';
-  }).join('');
+  // If the match ended abruptly (KO) mid-round, that round's conflicts were never
+  // committed via showRoundSummary -- pull them in now so the full log still shows it.
+  if(state.roundLog.length && (!state.matchLog.length || state.matchLog[state.matchLog.length-1].round !== state.round)){
+    state.matchLog.push({round: state.round, conflicts: state.roundLog});
+  }
 
   const s1 = state.matchStats[1], s2 = state.matchStats[2];
   const statsHtml =
-    '<div class="twocol">'+
-      '<div class="col"><b style="color:var(--red)">Player 1</b>'+
-        'HP: '+state.hp[1]+'<br>Damage: '+s1.dmg+'<br>Landed: '+s1.landed+'<br>Missed: '+s1.missed+'<br>'+
-        'Guarded/swayed: '+s1.avoided+'<br>Knockdowns: '+state.knockdownCount[1]+
-      '</div>'+
-      '<div class="col"><b style="color:var(--blue)">Player 2</b>'+
-        'HP: '+state.hp[2]+'<br>Damage: '+s2.dmg+'<br>Landed: '+s2.landed+'<br>Missed: '+s2.missed+'<br>'+
-        'Guarded/swayed: '+s2.avoided+'<br>Knockdowns: '+state.knockdownCount[2]+
-      '</div>'+
-    '</div>';
+    '<div class="pvhead"><b style="color:var(--red)">Player 1</b><b style="color:var(--blue)">Player 2</b></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+state.hp[1]+' HP</span><span style="color:var(--blue)">'+state.hp[2]+' HP</span></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+s1.dmg+' dmg</span><span style="color:var(--blue)">'+s2.dmg+' dmg</span></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+s1.landed+' landed</span><span style="color:var(--blue)">'+s2.landed+' landed</span></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+s1.missed+' missed</span><span style="color:var(--blue)">'+s2.missed+' missed</span></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+s1.avoided+' guarded/swayed</span><span style="color:var(--blue)">'+s2.avoided+' guarded/swayed</span></div>'+
+    '<div class="pvrow"><span style="color:var(--red)">'+state.knockdownCount[1]+' knockdowns</span><span style="color:var(--blue)">'+state.knockdownCount[2]+' knockdowns</span></div>';
+  body.innerHTML = statsHtml;
 
-  body.innerHTML = roundsHtml + statsHtml;
-  document.getElementById('end-scroll').innerHTML = '';
+  const fullLogHtml = state.matchLog.map(r=>{
+    const color = r.winner===1?'var(--red)':r.winner===2?'var(--blue)':'var(--text)';
+    const header = '<div class="roundline" style="color:'+color+'">ROUND '+r.round+'</div>';
+    return header + (r.conflicts||[]).map(renderConflictHtml).join('');
+  }).join('');
+  const logEl = document.getElementById('end-log');
+  if(fullLogHtml){ logEl.innerHTML = fullLogHtml; logEl.style.display = 'block'; }
+  else { logEl.innerHTML = ''; logEl.style.display = 'none'; }
+
   show('scr-end');
 }
 </script>
