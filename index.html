@@ -77,6 +77,8 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
 .pvrow{display:flex;justify-content:space-between;font-size:1em;margin:3px 0;}
 .pvrow b{font-weight:bold;}
 .pvhead{display:flex;justify-content:space-between;font-size:1.1em;margin:2px 0 6px;}
+.kd-banner{text-align:center;font-weight:bold;font-size:1.9em;color:#fff;text-transform:uppercase;
+  letter-spacing:3px;margin:16px 0;text-shadow:0 0 14px rgba(255,255,255,.85);}
 </style>
 </head>
 <body>
@@ -220,6 +222,7 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
     <div class="fig-wrap" id="fig2"></div>
   </div>
   <div id="beatlogs"></div>
+  <div id="kd-banner" class="kd-banner" style="display:none"></div>
   <button class="btn primary" id="next-btn" onclick="nextStep()" style="display:none">Next</button>
   <button class="btn ghost" onclick="askSurrender()">Surrender match</button>
 </div>
@@ -437,6 +440,10 @@ function figureSVG(color, pose, facing){
   const f = facing;
   let armF = "M50,55 L"+(50+30*f)+",50";
   let armB = "M50,55 L"+(50-14*f)+",60";
+  let headCy = 20;
+  let body = "M50,32 L50,70";
+  let legL = "M46,70 L40,105";
+  let legR = "M54,70 L60,105";
   let lean = 0;
   if(pose==='hook'){ armF = "M50,55 L"+(50+22*f)+",38"; }
   else if(pose==='upper'){ armF = "M50,58 L"+(50+18*f)+",32"; }
@@ -445,14 +452,22 @@ function figureSVG(color, pose, facing){
   else if(pose==='guard'){ armF="M50,55 L"+(50+12*f)+",34"; armB="M50,55 L"+(50-12*f)+",34"; }
   else if(pose==='sway-l'){ lean=-10; }
   else if(pose==='sway-r'){ lean=10; }
-  else if(pose==='down'){ lean = 20*f; }
+  else if(pose==='down'){
+    // Collapsed onto one knee: head and hips drop, one leg bends under, arms droop.
+    headCy = 40;
+    body = "M50,52 L50,80";
+    legL = "M46,80 L42,96 L38,113";
+    legR = "M54,80 L58,100 L54,113";
+    armF = "M50,62 L"+(50+16*f)+",86";
+    armB = "M50,62 L"+(50-10*f)+",86";
+  }
   return `<svg viewBox="0 0 100 120" width="70" height="100" style="transform:rotate(${lean}deg)">
-    <circle cx="50" cy="20" r="12" fill="${color}"/>
-    <line x1="50" y1="32" x2="50" y2="70" stroke="${color}" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="50" cy="${headCy}" r="12" fill="${color}"/>
+    <path d="${body}" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round"/>
     <path d="${armB}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round"/>
     <path d="${armF}" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round"/>
-    <line x1="46" y1="70" x2="40" y2="105" stroke="${color}" stroke-width="7" stroke-linecap="round"/>
-    <line x1="54" y1="70" x2="60" y2="105" stroke="${color}" stroke-width="7" stroke-linecap="round"/>
+    <path d="${legL}" stroke="${color}" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${legR}" stroke="${color}" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 }
 function poseFor(moveId){
@@ -655,8 +670,8 @@ function computeSingleBeat(i){
   let power1=0, power2=0;
   let evadedBy1=false, evadedBy2=false, graze1=false, graze2=false;
 
-  if(s1 && !m1.def) note1=m1.name+' flinches (stunned)! Guard or Sway next.';
-  if(s2 && !m2.def) note2=m2.name+' flinches (stunned)! Guard or Sway next.';
+  if(s1 && !m1.def) note1='<span style="color:#fff;font-weight:bold">'+m1.name+' flinches (stunned)! Guard or Sway next.</span>';
+  if(s2 && !m2.def) note2='<span style="color:#fff;font-weight:bold">'+m2.name+' flinches (stunned)! Guard or Sway next.</span>';
 
   if(m1.def && m2.def){
     note1 = note1 || (m1.name+' — no contact');
@@ -754,6 +769,8 @@ function computeSingleBeat(i){
   if(dmg1to2>=7 || state.conflictDealt[1]>=10) newStun[2]=true;
   if(dmg2to1>=7 || state.conflictDealt[2]>=10) newStun[1]=true;
   state.stunFlag = newStun;
+  if(newStun[2]) note1 += ' <span style="color:#fff;font-weight:bold">(Stuns!)</span>';
+  if(newStun[1]) note2 += ' <span style="color:#fff;font-weight:bold">(Stuns!)</span>';
 
   // --- priority for next beat ---
   const newPri = {1:false,2:false};
@@ -837,10 +854,14 @@ function nextStep(){
   log.appendChild(d);
 
   const kd = handleKnockdowns();
-  if(kd.ended) return;
-  if(kd.skip){
-    document.getElementById('next-btn').textContent='Continue (Knockdown!)';
-    document.getElementById('next-btn').onclick = afterConflict;
+  if(kd.type==='knockout'){
+    kd.down.forEach(p=>{ drawFig('fig'+p, p===1?'var(--red)':'var(--blue)', 'down', false, false, p===1); });
+    showBanner('KNOCKOUT', 2300, ()=> endMatch(kd.winner, true, false));
+    return;
+  }
+  if(kd.type==='knockdown'){
+    kd.down.forEach(p=>{ drawFig('fig'+p, p===1?'var(--red)':'var(--blue)', 'down', false, false, p===1); });
+    showBanner('KNOCKDOWN', 2000, afterConflict);
     return;
   }
   state.beatIndex++;
@@ -862,24 +883,39 @@ function koChanceFor(n){
 // Checks for 0-HP knockdowns after a beat's damage has been applied.
 // Returns {ended:true} if the match just ended in a knockout (endMatch already called),
 // or {skip:true} if a knockdown occurred but the fight continues (conflict cut short).
+function showBanner(text, delayMs, then){
+  document.getElementById('next-btn').style.display='none';
+  const banner = document.getElementById('kd-banner');
+  banner.textContent = text;
+  banner.style.display='block';
+  setTimeout(()=>{
+    const btn = document.getElementById('next-btn');
+    btn.textContent = 'Continue';
+    btn.onclick = ()=>{ banner.style.display='none'; then(); };
+    btn.style.display='block';
+  }, delayMs);
+}
+
+// Checks for 0-HP knockdowns after a beat's damage has been applied. Reports what
+// happened -- nextStep() owns showing the banner/pose and deciding what happens next.
 function handleKnockdowns(){
   const kd1 = state.hp[1]<=0, kd2 = state.hp[2]<=0;
-  if(!kd1 && !kd2) return {ended:false, skip:false};
+  if(!kd1 && !kd2) return {type:'none'};
   let ko1=false, ko2=false;
   if(kd1){ state.knockdownCount[1]++; ko1 = Math.random() < koChanceFor(state.knockdownCount[1]); }
   if(kd2){ state.knockdownCount[2]++; ko2 = Math.random() < koChanceFor(state.knockdownCount[2]); }
-  document.getElementById('next-btn').style.display='none';
   logConflict();
-  if(ko1 && ko2){ setTimeout(()=>endMatch(0, true, false), 600); return {ended:true}; }
-  if(ko1){ setTimeout(()=>endMatch(2, true, false), 600); return {ended:true}; }
-  if(ko2){ setTimeout(()=>endMatch(1, true, false), 600); return {ended:true}; }
+  const down = [].concat(kd1?[1]:[], kd2?[2]:[]);
+  if(ko1 || ko2){
+    const winner = (ko1 && ko2) ? 0 : (ko1 ? 2 : 1);
+    return {type:'knockout', down, winner};
+  }
   // Knocked down but survives -- recovers to 2 HP, wins this round automatically
   // (unless the opponent also went down this round -- see showRoundSummary).
   if(kd1){ state.hp[1]=2; state.knockdownFlagRound[1]=true; }
   if(kd2){ state.hp[2]=2; state.knockdownFlagRound[2]=true; }
   updateHpUI();
-  document.getElementById('next-btn').style.display='block';
-  return {ended:false, skip:true};
+  return {type:'knockdown', down};
 }
 
 function logConflict(){
@@ -904,14 +940,19 @@ function afterConflict(){
 }
 
 function showRoundSummary(){
-  let winner;
+  let winner, resultLine, bothDownNote = '';
   const kd1 = state.knockdownFlagRound[1], kd2 = state.knockdownFlagRound[2];
-  let kdNote = '';
-  if(kd1 && !kd2){ winner=2; kdNote = '<b>Knockdown — Player 2 wins the round</b><br>'; }
-  else if(kd2 && !kd1){ winner=1; kdNote = '<b>Knockdown — Player 1 wins the round</b><br>'; }
-  else {
+  if(kd1 && !kd2){
+    winner=2;
+    resultLine = '<b style="color:var(--blue)">Player 2</b> won by <b style="color:#fff">Knockdown</b>';
+  } else if(kd2 && !kd1){
+    winner=1;
+    resultLine = '<b style="color:var(--red)">Player 1</b> won by <b style="color:#fff">Knockdown</b>';
+  } else {
     winner = roundWinner(state.roundStats[1], state.roundStats[2]);
-    if(kd1 && kd2) kdNote = '<b>Both fighters were knocked down — scored normally</b><br>';
+    resultLine = winner===0 ? '<b>Round drawn — no points awarded</b>' :
+      '<b style="color:'+(winner===1?'var(--red)':'var(--blue)')+'">Player '+winner+' wins this round</b>';
+    if(kd1 && kd2) bothDownNote = '<div class="center">Both fighters were <b style="color:#fff">knocked down</b> this round</div>';
   }
   if(winner===0) state.roundDraws++; else state.roundWins[winner]++;
   state.roundResults.push({round: state.round, winner});
@@ -919,12 +960,10 @@ function showRoundSummary(){
   document.getElementById('rs-title').textContent = 'Round '+state.round+' Summary';
   document.getElementById('rs-p1hp').style.width = (state.hp[1]/state.maxHp*100)+'%';
   document.getElementById('rs-p2hp').style.width = (state.hp[2]/state.maxHp*100)+'%';
-  const winTxt = winner===0 ? '<b>Round drawn — no points awarded</b>' :
-    '<b style="color:'+(winner===1?'var(--red)':'var(--blue)')+'">Player '+winner+' wins this round</b>';
   const s1=state.roundStats[1], s2=state.roundStats[2];
   document.getElementById('rs-stats').innerHTML =
-    (kdNote? '<div class="center">'+kdNote+'</div>' : '') +
-    '<div class="center" style="margin-bottom:6px">'+winTxt+'</div>'+
+    '<div class="center" style="margin-bottom:6px">'+resultLine+'</div>'+
+    bothDownNote+
     '<div class="pvhead"><b style="color:var(--red)">Player 1</b><b style="color:var(--blue)">Player 2</b></div>'+
     '<div class="pvrow"><span style="color:var(--red)">'+s1.dmg+' dmg</span><span style="color:var(--blue)">'+s2.dmg+' dmg</span></div>'+
     '<div class="pvrow"><span style="color:var(--red)">'+s1.landed+' landed</span><span style="color:var(--blue)">'+s2.landed+' landed</span></div>'+
