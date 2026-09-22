@@ -155,8 +155,8 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
     Punching through guard keeps it alive. Throwing an Overhand always
     ends the chain, whether it lands or not — it's a finisher, not a
     link. Resets fully at the start of every round.
-    <h3>Special: Jab vs Hooks/Body Shots</h3>
-    A jab can't stop a hook or body shot's momentum — if a jab meets one
+    <h3>Special: Jab vs Hooks/Overhand</h3>
+    A jab can't stop a hook or overhand's momentum — if a jab meets one
     of these, both punches land.
     <h3>Stun</h3>
     Any single beat that deals 7+ damage stuns the opponent's next beat,
@@ -326,7 +326,7 @@ const MOVES = {
 };
 const MOVE_ORDER = ['jab','guard','swayl','swayr','straight','cross','lbody','rbody','lhook','rhook','luppercut','ruppercut','loverhand','roverhand'];
 // Moves whose momentum a jab can't stop -- jab vs these = trade, not interrupt.
-const JAB_IMMUNE = new Set(['lhook','rhook','lbody','rbody']);
+const JAB_IMMUNE = new Set(['lhook','rhook','loverhand','roverhand']);
 const COMBO_CAP = 3;
 // Same-tier, opposite-hand pairs eligible for the hook/uppercut/body clash rule.
 const CLASH_TIER = {lhook:'hook', rhook:'hook', luppercut:'upper', ruppercut:'upper', lbody:'body', rbody:'body'};
@@ -403,9 +403,13 @@ function setDifficulty(d){
   document.getElementById('diff-hard').classList.toggle('selected', d==='hard');
 }
 
-function resetRoundScopedState(){
+function resetBonuses(){
   state.streak={1:0,2:0}; state.priority={1:false,2:false}; state.stunFlag={1:false,2:false};
-  state.setup={1:null,2:null}; state.knockdownFlagRound={1:false,2:false};
+  state.setup={1:null,2:null};
+}
+function resetRoundScopedState(){
+  resetBonuses();
+  state.knockdownFlagRound={1:false,2:false};
 }
 
 function startMatch(){
@@ -734,7 +738,7 @@ function computeSingleBeat(i){
     if(active2){
       const r = resolveAtkVsDef(m2, m1id);
       clean2 = r.clean; graze2 = !!r.graze;
-      if(r.clean){ const f=finalizeClean(2,m2id,r.dmg); dmg2to1=f.dmg; power2=f.power; note2=r.text; }
+      if(r.clean || r.pierce){ const f=finalizeClean(2,m2id,r.dmg); dmg2to1=f.dmg; power2=f.power; note2=r.text; }
       else { dmg2to1=r.dmg; note2=r.text; }
       if(r.evaded) evadedBy1=true;
     }
@@ -743,7 +747,7 @@ function computeSingleBeat(i){
     if(active1){
       const r = resolveAtkVsDef(m1, m2id);
       clean1 = r.clean; graze1 = !!r.graze;
-      if(r.clean){ const f=finalizeClean(1,m1id,r.dmg); dmg1to2=f.dmg; power1=f.power; note1=r.text; }
+      if(r.clean || r.pierce){ const f=finalizeClean(1,m1id,r.dmg); dmg1to2=f.dmg; power1=f.power; note1=r.text; }
       else { dmg1to2=r.dmg; note1=r.text; }
       if(r.evaded) evadedBy2=true;
     }
@@ -824,6 +828,8 @@ function computeSingleBeat(i){
   if(dmg1to2>=7 || (preCum1<10 && state.conflictDealt[1]>=10)) newStun[2]=true;
   if(dmg2to1>=7 || (preCum2<10 && state.conflictDealt[2]>=10)) newStun[1]=true;
   state.stunFlag = newStun;
+  if(newStun[2]) state.conflictDealt[1]=0;
+  if(newStun[1]) state.conflictDealt[2]=0;
   if(newStun[2]) note1 += ' <span style="color:#fff;font-weight:bold">(Stuns!)</span>';
   if(newStun[1]) note2 += ' <span style="color:#fff;font-weight:bold">(Stuns!)</span>';
 
@@ -976,6 +982,7 @@ function handleKnockdowns(){
   // automatically (unless the opponent also went down this round -- see showRoundSummary).
   if(kd1){ state.knockdownFlagRound[1]=true; }
   if(kd2){ state.knockdownFlagRound[2]=true; }
+  resetBonuses();
   return {type:'knockdown', down};
 }
 
