@@ -167,7 +167,7 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
     that.
     <h3>Knockdown &amp; Knockout</h3>
     Hitting 0 HP is a knockdown, not an automatic loss. The knocked-down
-    fighter recovers to 2 HP and the current conflict ends early, but the
+    fighter recovers to 20% of max HP and the current conflict ends early, but the
     round continues. A knockdown wins you that round automatically —
     unless both fighters go down in the same round, in which case it's
     scored normally instead. Each knockdown also rolls a knockout chance
@@ -815,13 +815,14 @@ function computeSingleBeat(i){
   updateComboChain(2, m2id, m2.def, dmg2to1, dmg1to2, bonus2);
 
   // --- stun for next beat ---
+  const preCum1 = state.conflictDealt[1], preCum2 = state.conflictDealt[2];
   state.conflictDealt[1] += dmg1to2;
   state.conflictDealt[2] += dmg2to1;
   const newStun = {1:false,2:false};
   if(s1 && dmg2to1>0) newStun[1]=true;
   if(s2 && dmg1to2>0) newStun[2]=true;
-  if(dmg1to2>=7 || state.conflictDealt[1]>=10) newStun[2]=true;
-  if(dmg2to1>=7 || state.conflictDealt[2]>=10) newStun[1]=true;
+  if(dmg1to2>=7 || (preCum1<10 && state.conflictDealt[1]>=10)) newStun[2]=true;
+  if(dmg2to1>=7 || (preCum2<10 && state.conflictDealt[2]>=10)) newStun[1]=true;
   state.stunFlag = newStun;
   if(newStun[2]) note1 += ' <span style="color:#fff;font-weight:bold">(Stuns!)</span>';
   if(newStun[1]) note2 += ' <span style="color:#fff;font-weight:bold">(Stuns!)</span>';
@@ -916,6 +917,10 @@ function nextStep(){
   if(kd.type==='knockdown'){
     kd.down.forEach(p=>{ drawFig('fig'+p, p===1?'var(--red)':'var(--blue)', 'down', false, true, p===1); });
     showBanner('KNOCKDOWN', 2000, afterConflict);
+    setTimeout(()=>{
+      kd.down.forEach(p=>{ state.hp[p] = Math.round(state.maxHp*0.2); });
+      updateHpUI();
+    }, 1000);
     return;
   }
   state.beatIndex++;
@@ -966,11 +971,11 @@ function handleKnockdowns(){
     const winner = (ko1 && ko2) ? 0 : (ko1 ? 2 : 1);
     return {type:'knockout', down, winner};
   }
-  // Knocked down but survives -- recovers to 2 HP, wins this round automatically
-  // (unless the opponent also went down this round -- see showRoundSummary).
-  if(kd1){ state.hp[1]=2; state.knockdownFlagRound[1]=true; }
-  if(kd2){ state.hp[2]=2; state.knockdownFlagRound[2]=true; }
-  updateHpUI();
+  // Knocked down but survives -- HP refill is handled by nextStep() a beat into the
+  // banner, so the bar stays visibly at 0 while KNOCKDOWN is showing. Wins this round
+  // automatically (unless the opponent also went down this round -- see showRoundSummary).
+  if(kd1){ state.knockdownFlagRound[1]=true; }
+  if(kd2){ state.knockdownFlagRound[2]=true; }
   return {type:'knockdown', down};
 }
 
