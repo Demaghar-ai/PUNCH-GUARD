@@ -92,97 +92,39 @@ table.sumtable td,table.sumtable th{padding:5px;text-align:center;border-bottom:
 </div>
 
 <div class="screen" id="scr-rules">
-  <h1 style="font-size:1.6em">Rules</h1>
+  <h1 style="font-size:1.6em">How to Play</h1>
   <div class="scroll rules-body">
-    <h3>Structure</h3>
-    A match has 3 rounds. Each round has 3 conflicts. Each conflict, both
-    players secretly pick 3 moves in order. The moves clash beat-by-beat:
-    your move 1 vs their move 1, move 2 vs move 2, move 3 vs move 3.
-    <h3>Strike Details</h3>
-    Speed 1 is fastest. "vs Guard" and "vs Sway" show damage after that
-    defense, before any Power/Speed Chain bonus.
-    <table class="sumtable">
-      <tr><th>Move</th><th>Spd</th><th>Dmg</th><th>vs Guard</th><th>vs Sway</th></tr>
-      <tr><td>Jab</td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
-      <tr><td>Straight</td><td>2</td><td>2</td><td>0</td><td>0</td></tr>
-      <tr><td>Cross</td><td>2</td><td>2</td><td>0</td><td>0</td></tr>
-      <tr><td>Body Shot L/R</td><td>2</td><td>2</td><td>0</td><td>2 (never dodged)</td></tr>
-      <tr><td>Hook L/R</td><td>3</td><td>3</td><td>0</td><td>1 graze / 5 caught</td></tr>
-      <tr><td>Uppercut L/R</td><td>4</td><td>4</td><td>1 chip</td><td>0 / 6 caught</td></tr>
-      <tr><td>Overhand L/R</td><td>5</td><td>6</td><td>3 chip</td><td>0 / 6 caught</td></tr>
-    </table>
-    "vs Sway" lists the matching-side result first, then the wrong-side
-    result. Guard and Sway have no speed or damage of their own.
-    <h3>Speed</h3>
-    When both players attack in the same beat, the faster move lands and
-    the slower one is interrupted (misses). Equal speed = both land (a
-    trade) — <b>except</b> Hook, Uppercut, or Body Shot vs the same type
-    thrown from the <b>opposite</b> hand (e.g. Left Hook vs Right Hook,
-    or Right Uppercut vs Left Uppercut): that's a clash — both still
-    land, but for 1 less base damage each. Any Power Chain bonus still
-    applies on top as normal. Same-hand pairs (Left Hook vs Left Hook)
-    aren't a clash — just a normal trade.
-    <h3>Guard</h3>
-    Guard fully blocks light shots (Jab, Straight, Cross, Hooks, Body
-    Shots). Heavy shots (Uppercuts, Overhand) still chip 1-3 damage
-    through, shown in the table above.
-    <h3>Sway</h3>
-    Sway (either direction) always dodges Jab, Straight, and Cross.
-    Hooks, Uppercuts, and Overhand only get dodged if you sway the
-    <b>matching</b> side — a Left Hook is beaten by Sway Left, a Right
-    Uppercut by Sway Right. Overhand is the exception: it's beaten by
-    the <b>opposite</b>-side sway (Sway Left dodges a Right Overhand).
-    The wrong side gets you caught clean, and Hooks/Uppercuts hit
-    <b>extra hard</b> when they catch you leaning. A correctly-read Hook
-    still grazes you for 1 (Uppercuts and Overhand fully miss on a
-    correct read). Body shots are never dodged by sway, either way. A
-    successful sway also gives you <b>timing priority</b> on your very
-    next move, letting it land first regardless of speed.
-    <h3>Power Chain</h3>
-    Landing clean hits builds a damage bonus (up to +3) added to your
-    damage. Getting hit by anything other than a jab resets it, and it
-    resets fully at the start of every round. Jab itself never builds or
-    breaks it — it can't carry a fight on its own.
-    <h3>Speed Chain</h3>
-    A landed punch sets up a speed bonus for your very next strike if it
-    comes from the <b>opposite hand</b> (Jab/Straight lead into a Cross,
-    and back — this flips in southpaw). A successful sway sets up the
-    same bonus for a strike from the <b>same side</b> you swayed. Each
-    link raises it by 1, capped at +3, and it reduces your move's
-    effective speed by that amount in a clash — it does <b>not</b> add
-    damage, only speed. Choosing Guard wipes it out; taking non-jab
-    damage wipes it out; a trade uses it but ends the chain right after.
-    Punching through guard keeps it alive. Throwing an Overhand always
-    ends the chain, whether it lands or not — it's a finisher, not a
-    link. Resets fully at the start of every round.
-    <h3>Special: Jab vs Hooks/Overhand</h3>
-    A jab can't stop a hook or overhand's momentum — if a jab meets one
-    of these, both punches land.
-    <h3>Stun</h3>
-    Any single beat that deals 7+ damage stuns the opponent's next beat,
-    and so does dealing 10+ total damage within one conflict. A stunned
-    player can still Guard or Sway normally — those still work fine —
-    but any attack they'd picked just fails to come out. Getting hit
-    again while still stunned keeps the stun going into the beat after
-    that.
-    <h3>Knockdown &amp; Knockout</h3>
-    Hitting 0 HP is a knockdown, not an automatic loss. The knocked-down
-    fighter recovers to 20% of max HP and the current conflict ends early, but the
-    round continues. A knockdown wins you that round automatically —
-    unless both fighters go down in the same round, in which case it's
-    scored normally instead. Each knockdown also rolls a knockout chance
-    based on how many times you've been dropped this match: 20% on the
-    1st, 45% on the 2nd, 75% on the 3rd, and the 4th is a guaranteed
-    knockout. A knockout ends the match immediately.
-    <h3>Health &amp; Rounds</h3>
-    Each fighter has 30 HP. Between rounds, they recover 20% of the HP
-    they lost that round (rounded down), plus 1 HP for every strike they
-    fully swayed or guarded that round (0 damage taken). Each round is
-    scored on damage dealt, accuracy, and shots landed — whoever wins
-    more rounds wins the match, even if they lost a round badly.
-    <h3>Surrender</h3>
-    Either player can surrender mid-match. This ends the match
-    immediately as a No Contest — no winner is recorded.
+    <h3>The Basics</h3>
+    A match is 3 rounds. Each round is 3 conflicts. Each conflict, both
+    players secretly pick 3 moves, then they clash one beat at a time.
+    Each fighter has 30 HP.
+    <h3>Speed &amp; Damage</h3>
+    When both attack, the faster move lands and the slower one misses.
+    Equal speed usually means both land. A few pairs behave
+    differently — jab can't stop a hook or overhand's momentum (both
+    land), and two matching power punches from opposite hands (like
+    Left Hook vs Right Hook) clash instead of trading in full.
+    <h3>Guard &amp; Sway</h3>
+    Guard blocks ordinary punches outright, but heavy shots (uppercuts,
+    overhand) still chip some damage through. Sway dodges straight
+    punches for free, but against hooks, uppercuts, and overhand you
+    have to lean the correct way — guess wrong and you eat it hard. A
+    good sway also sets up your very next strike to land first.
+    <h3>Chains</h3>
+    Stringing together clean hits and good reads builds two bonuses for
+    your next strike: extra damage (Power) and extra speed (Speed).
+    Get hit or guard up and the bonus is gone — keep the pressure on to
+    keep it going.
+    <h3>Stun &amp; Knockdown</h3>
+    A big enough hit rocks your opponent, and their next move just
+    fails — unless they guard or sway it off. Getting dropped to 0 HP
+    isn't the end either — you get back up and keep fighting, though
+    repeated knockdowns raise the risk of a fight-ending knockout.
+    <h3>Winning</h3>
+    HP recovers a bit between rounds. The match is decided by who wins
+    more rounds, not just total damage — so a bad round doesn't sink
+    you if you take the other two. Either player can also surrender to
+    end the match early as a No Contest.
   </div>
   <button class="btn primary" onclick="show('scr-menu')">Back to Menu</button>
 </div>
@@ -698,14 +640,19 @@ function updateComboChain(player, moveId, isDef, dealt, taken, usedBonus){
   if(moveId==='loverhand' || moveId==='roverhand'){ state.setup[player] = null; return; } // finisher, never chains onward
   if(isDef && dealt===0 && taken===0 && (moveId==='swayl'||moveId==='swayr')){
     const side = moveId==='swayl' ? 'left' : 'right';
-    state.setup[player] = {matchHand: side, level: Math.min(usedBonus+1, COMBO_CAP)};
+    const prev = state.setup[player];
+    // A sway on the SAME side as whatever move last succeeded carries the chain through
+    // (escalating it). A sway on the opposite side resets it fresh at level 1.
+    const carriesThrough = prev && prev.originHand===side;
+    const level = carriesThrough ? Math.min(prev.level+1, COMBO_CAP) : 1;
+    state.setup[player] = {matchHand: side, level, originHand: side};
     return;
   }
   if(dealt>0){
     const hand = handOf(moveId, state.stance[player]);
     if(hand){
       const opposite = hand==='left' ? 'right' : 'left';
-      state.setup[player] = {matchHand: opposite, level: Math.min(usedBonus+1, COMBO_CAP)};
+      state.setup[player] = {matchHand: opposite, level: Math.min(usedBonus+1, COMBO_CAP), originHand: hand};
     } else {
       state.setup[player] = null;
     }
